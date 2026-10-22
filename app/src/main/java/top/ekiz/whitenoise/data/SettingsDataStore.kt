@@ -3,6 +3,7 @@ package top.ekiz.whitenoise.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -31,95 +32,49 @@ class SettingsDataStore @Inject constructor(@ApplicationContext private val cont
         val TOTAL_TIMER_MILLIS_KEY = longPreferencesKey("total_timer_millis")
         val BALANCE_KEY = floatPreferencesKey("balance")
         val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
-        val SPATIAL_AUDIO_KEY =
-            androidx.datastore.preferences.core.booleanPreferencesKey("spatial_audio")
+        val SPATIAL_AUDIO_KEY = booleanPreferencesKey("spatial_audio")
     }
 
-    val volumeFlow: Flow<Float> =
-        context.dataStore.data
-            .map { preferences -> preferences[VOLUME_KEY] ?: 0.5f }
-            .distinctUntilChanged()
+    private fun <T> flowOf(key: Preferences.Key<T>, default: T): Flow<T> =
+        context.dataStore.data.map { it[key] ?: default }.distinctUntilChanged()
+
+    private suspend fun <T> save(key: Preferences.Key<T>, value: T) {
+        context.dataStore.edit { it[key] = value }
+    }
+
+    val volumeFlow: Flow<Float> = flowOf(VOLUME_KEY, 0.5f)
 
     val noiseTypeFlow: Flow<NoiseType> =
-        context.dataStore.data
-            .map { preferences ->
-                val typeString = preferences[NOISE_TYPE_KEY] ?: NoiseType.WHITE.name
-                try {
-                    NoiseType.valueOf(typeString)
-                } catch (e: Exception) {
-                    NoiseType.WHITE
-                }
-            }
+        flowOf(NOISE_TYPE_KEY, NoiseType.WHITE.name)
+            .map { name -> NoiseType.entries.firstOrNull { it.name == name } ?: NoiseType.WHITE }
             .distinctUntilChanged()
 
-    val sleepTimerFlow: Flow<Int> =
-        context.dataStore.data
-            .map { preferences -> preferences[SLEEP_TIMER_KEY] ?: 0 }
-            .distinctUntilChanged()
+    val sleepTimerFlow: Flow<Int> = flowOf(SLEEP_TIMER_KEY, 0)
+    val timerEndTimeFlow: Flow<Long> = flowOf(TIMER_END_TIME_KEY, 0L)
+    val timerRemainingFlow: Flow<Long> = flowOf(TIMER_REMAINING_KEY, 0L)
+    val totalTimerMillisFlow: Flow<Long> = flowOf(TOTAL_TIMER_MILLIS_KEY, 0L)
+    val balanceFlow: Flow<Float> = flowOf(BALANCE_KEY, 0f)
+    val themeModeFlow: Flow<String> = flowOf(THEME_MODE_KEY, "System")
+    val spatialAudioFlow: Flow<Boolean> = flowOf(SPATIAL_AUDIO_KEY, false)
 
-    val timerEndTimeFlow: Flow<Long> =
-        context.dataStore.data
-            .map { preferences -> preferences[TIMER_END_TIME_KEY] ?: 0L }
-            .distinctUntilChanged()
+    suspend fun saveVolume(volume: Float) = save(VOLUME_KEY, volume)
 
-    val timerRemainingFlow: Flow<Long> =
-        context.dataStore.data
-            .map { preferences -> preferences[TIMER_REMAINING_KEY] ?: 0L }
-            .distinctUntilChanged()
+    suspend fun saveNoiseType(noiseType: NoiseType) = save(NOISE_TYPE_KEY, noiseType.name)
 
-    val totalTimerMillisFlow: Flow<Long> =
-        context.dataStore.data
-            .map { preferences -> preferences[TOTAL_TIMER_MILLIS_KEY] ?: 0L }
-            .distinctUntilChanged()
+    suspend fun saveSleepTimer(minutes: Int) = save(SLEEP_TIMER_KEY, minutes)
 
-    val balanceFlow: Flow<Float> =
-        context.dataStore.data
-            .map { preferences -> preferences[BALANCE_KEY] ?: 0f }
-            .distinctUntilChanged()
+    suspend fun saveBalance(balance: Float) = save(BALANCE_KEY, balance)
 
-    val themeModeFlow: Flow<String> =
-        context.dataStore.data
-            .map { preferences -> preferences[THEME_MODE_KEY] ?: "System" }
-            .distinctUntilChanged()
+    suspend fun saveThemeMode(mode: String) = save(THEME_MODE_KEY, mode)
 
-    val spatialAudioFlow: Flow<Boolean> =
-        context.dataStore.data
-            .map { preferences -> preferences[SPATIAL_AUDIO_KEY] ?: false }
-            .distinctUntilChanged()
+    suspend fun saveSpatialAudio(enabled: Boolean) = save(SPATIAL_AUDIO_KEY, enabled)
 
-    suspend fun saveVolume(volume: Float) {
-        context.dataStore.edit { preferences -> preferences[VOLUME_KEY] = volume }
-    }
-
-    suspend fun saveNoiseType(noiseType: NoiseType) {
-        context.dataStore.edit { preferences -> preferences[NOISE_TYPE_KEY] = noiseType.name }
-    }
-
-    suspend fun saveSleepTimer(minutes: Int) {
-        context.dataStore.edit { preferences -> preferences[SLEEP_TIMER_KEY] = minutes }
-    }
-
-    suspend fun saveTimerEndTime(millis: Long) {
-        context.dataStore.edit { preferences -> preferences[TIMER_END_TIME_KEY] = millis }
-    }
-
-    suspend fun saveTimerRemaining(millis: Long) {
-        context.dataStore.edit { preferences -> preferences[TIMER_REMAINING_KEY] = millis }
-    }
-
-    suspend fun saveTotalTimerMillis(millis: Long) {
-        context.dataStore.edit { preferences -> preferences[TOTAL_TIMER_MILLIS_KEY] = millis }
-    }
-
-    suspend fun saveBalance(balance: Float) {
-        context.dataStore.edit { preferences -> preferences[BALANCE_KEY] = balance }
-    }
-
-    suspend fun saveThemeMode(mode: String) {
-        context.dataStore.edit { preferences -> preferences[THEME_MODE_KEY] = mode }
-    }
-
-    suspend fun saveSpatialAudio(enabled: Boolean) {
-        context.dataStore.edit { preferences -> preferences[SPATIAL_AUDIO_KEY] = enabled }
+    /** Writes all three timer fields in one transaction instead of three separate file writes. */
+    suspend fun saveTimerState(endTime: Long, remaining: Long, totalMillis: Long? = null) {
+        context.dataStore.edit {
+            it[TIMER_END_TIME_KEY] = endTime
+            it[TIMER_REMAINING_KEY] = remaining
+            if (totalMillis != null) it[TOTAL_TIMER_MILLIS_KEY] = totalMillis
+        }
     }
 }

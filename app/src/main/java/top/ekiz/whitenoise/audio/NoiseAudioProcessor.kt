@@ -28,15 +28,23 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
 
     fun initialize(type: NoiseType) {
         noiseType = type
+        switchImmediately(type)
+    }
+
+    private fun createGenerator(type: NoiseType): NoiseGenerator {
+        val generator = NoiseGeneratorFactory.create(type)
+        if (inputAudioFormat.sampleRate > 0) {
+            generator.updateSampleRate(inputAudioFormat.sampleRate.toDouble())
+        }
+        return generator
+    }
+
+    private fun switchImmediately(type: NoiseType) {
         currentNoiseType = type
         fadingGenerator = null
         crossfadeProgress = 1f
+        currentGenerator = createGenerator(type)
         forceImmediateSwitch = false
-
-        currentGenerator = NoiseGeneratorFactory.create(type)
-        if (inputAudioFormat.sampleRate > 0) {
-            currentGenerator.updateSampleRate(inputAudioFormat.sampleRate.toDouble())
-        }
     }
 
     private var crossfadeProgress = 1f
@@ -104,21 +112,10 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
 
         if (currentNoiseType != noiseType) {
             if (forceImmediateSwitch) {
-                currentNoiseType = noiseType
-                fadingGenerator = null
-                crossfadeProgress = 1f
-                currentGenerator = NoiseGeneratorFactory.create(noiseType)
-                if (inputAudioFormat.sampleRate > 0) {
-                    currentGenerator.updateSampleRate(inputAudioFormat.sampleRate.toDouble())
-                }
-                forceImmediateSwitch = false
+                switchImmediately(noiseType)
             } else {
                 fadingGenerator = currentGenerator
-                currentGenerator = NoiseGeneratorFactory.create(noiseType)
-                if (inputAudioFormat.sampleRate > 0) {
-                    currentGenerator.updateSampleRate(inputAudioFormat.sampleRate.toDouble())
-                }
-
+                currentGenerator = createGenerator(noiseType)
                 currentNoiseType = noiseType
                 crossfadeProgress = 0f
             }

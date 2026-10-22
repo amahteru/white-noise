@@ -19,8 +19,6 @@ class VelvetNoiseGenerator : NoiseGenerator() {
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
-
         baseGrid = 1.coerceAtLeast((0.00034 * sr).toInt())
         varianceGrid = 0.00034 * sr
     }

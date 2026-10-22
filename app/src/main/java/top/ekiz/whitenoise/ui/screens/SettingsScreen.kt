@@ -28,8 +28,10 @@ import top.ekiz.whitenoise.ui.theme.spacing
 fun SettingsScreen(
     innerPadding: PaddingValues,
     volume: Float,
+    onVolumePreview: (Float) -> Unit,
     onVolumeChanged: (Float) -> Unit,
     balance: Float,
+    onBalancePreview: (Float) -> Unit,
     onBalanceChanged: (Float) -> Unit,
     sleepTimer: Int,
     onSleepTimerChanged: (Int) -> Unit,
@@ -65,20 +67,33 @@ fun SettingsScreen(
                 )
         )
 
+        // Drafts hold the value while a slider is dragged; it is saved once, on release.
+        var volumeDraft by remember { mutableStateOf<Float?>(null) }
+        LaunchedEffect(volume) { volumeDraft = null }
         SliderSettingRow(
             icon = Icons.AutoMirrored.Filled.VolumeUp,
             contentDescription = "音量大小",
-            value = volume,
-            onValueChange = onVolumeChanged,
+            value = volumeDraft ?: volume,
+            onValueChange = {
+                volumeDraft = it
+                onVolumePreview(it)
+            },
+            onValueChangeFinished = { volumeDraft?.let(onVolumeChanged) },
             valueRange = 0f..1f,
             steps = 0
         )
 
+        var balanceDraft by remember { mutableStateOf<Float?>(null) }
+        LaunchedEffect(balance) { balanceDraft = null }
         SliderSettingRow(
             icon = Icons.Filled.Tune,
             contentDescription = "左右耳平衡",
-            value = balance,
-            onValueChange = onBalanceChanged,
+            value = balanceDraft ?: balance,
+            onValueChange = {
+                balanceDraft = it
+                onBalancePreview(it)
+            },
+            onValueChangeFinished = { balanceDraft?.let(onBalanceChanged) },
             valueRange = -1f..1f,
             labels = listOf("偏左", "居中", "偏右")
         )
@@ -99,11 +114,16 @@ fun SettingsScreen(
 
         var showTimePicker by remember { mutableStateOf(false) }
 
+        // Committing on release also stops a running timer from restarting on every drag frame.
+        var sleepTimerDraft by remember { mutableStateOf<Int?>(null) }
+        LaunchedEffect(sleepTimer) { sleepTimerDraft = null }
+        val shownSleepTimer = sleepTimerDraft ?: sleepTimer
         SliderSettingRow(
             icon = Icons.Filled.Schedule,
-            contentDescription = "倒计时长: $sleepTimer 分钟",
-            value = sleepTimer.coerceAtMost(120).toFloat(),
-            onValueChange = { onSleepTimerChanged(it.roundToInt()) },
+            contentDescription = "倒计时长: $shownSleepTimer 分钟",
+            value = shownSleepTimer.coerceAtMost(120).toFloat(),
+            onValueChange = { sleepTimerDraft = it.roundToInt() },
+            onValueChangeFinished = { sleepTimerDraft?.let(onSleepTimerChanged) },
             valueRange = 0f..120f,
             labels = listOf("0", "60", "120"),
             steps = 11
@@ -113,7 +133,7 @@ fun SettingsScreen(
         if (isTimerRunning || remainingTimeMillis > 0L) {
             calendar.timeInMillis = System.currentTimeMillis() + remainingTimeMillis
         } else {
-            calendar.timeInMillis = System.currentTimeMillis() + sleepTimer * 60000L
+            calendar.timeInMillis = System.currentTimeMillis() + shownSleepTimer * 60000L
         }
         val targetHour = calendar.get(Calendar.HOUR_OF_DAY)
         val targetMinute = calendar.get(Calendar.MINUTE)
@@ -314,8 +334,10 @@ private fun SettingsScreenPreview() {
             SettingsScreen(
                 innerPadding = PaddingValues(),
                 volume = 0.6f,
+                onVolumePreview = {},
                 onVolumeChanged = {},
                 balance = -0.2f,
+                onBalancePreview = {},
                 onBalanceChanged = {},
                 sleepTimer = 30,
                 onSleepTimerChanged = {},

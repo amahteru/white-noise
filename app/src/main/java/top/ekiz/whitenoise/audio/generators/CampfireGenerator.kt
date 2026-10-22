@@ -40,8 +40,6 @@ class CampfireGenerator : NoiseGenerator() {
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
-
         val safeRumbleFreq = 150.0.coerceAtMost(sr * 0.45)
         val safeCrackleFreq = 4000.0.coerceAtMost(sr * 0.45)
 

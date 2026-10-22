@@ -12,6 +12,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.SilenceMediaSource
+import androidx.media3.session.MediaController
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
@@ -26,12 +27,26 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import top.ekiz.whitenoise.audio.NoiseAudioProcessor
 import top.ekiz.whitenoise.data.SettingsDataStore
 import top.ekiz.whitenoise.domain.TimerEvent
 import top.ekiz.whitenoise.domain.TimerManager
+
+fun MediaController.sendFadePlayPause(play: Boolean) {
+    val action = if (play) NoiseService.PLAY_WITH_FADE else NoiseService.PAUSE_WITH_FADE
+    sendCustomCommand(SessionCommand(action, Bundle.EMPTY), Bundle.EMPTY)
+}
+
+/** Applies a volume/balance value to the audio immediately, without persisting it. */
+fun MediaController.sendLiveValue(action: String, value: Float) {
+    sendCustomCommand(
+        SessionCommand(action, Bundle.EMPTY),
+        Bundle().apply { putFloat(NoiseService.EXTRA_VALUE, value) }
+    )
+}
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
@@ -40,6 +55,9 @@ class NoiseService : MediaSessionService() {
     companion object {
         const val PLAY_WITH_FADE = "PLAY_WITH_FADE"
         const val PAUSE_WITH_FADE = "PAUSE_WITH_FADE"
+        const val SET_LIVE_VOLUME = "SET_LIVE_VOLUME"
+        const val SET_LIVE_BALANCE = "SET_LIVE_BALANCE"
+        const val EXTRA_VALUE = "value"
     }
 
     @Inject lateinit var settingsDataStore: SettingsDataStore
@@ -123,6 +141,10 @@ class NoiseService : MediaSessionService() {
                     false
                 )
                 .setHandleAudioBecomingNoisy(true)
+                .setWakeMode(C.WAKE_MODE_LOCAL)
+                // Audio-only: let the playback loop sleep until the AudioTrack needs data
+                // instead of polling every 10 ms.
+                .experimentalSetDynamicSchedulingEnabled(true)
                 .build()
 
         player.addListener(
@@ -155,6 +177,8 @@ class NoiseService : MediaSessionService() {
                             .buildUpon()
                             .add(SessionCommand(PLAY_WITH_FADE, Bundle.EMPTY))
                             .add(SessionCommand(PAUSE_WITH_FADE, Bundle.EMPTY))
+                            .add(SessionCommand(SET_LIVE_VOLUME, Bundle.EMPTY))
+                            .add(SessionCommand(SET_LIVE_BALANCE, Bundle.EMPTY))
                             .build()
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .setAvailableSessionCommands(availableCommands)
@@ -171,16 +195,9 @@ class NoiseService : MediaSessionService() {
                         PLAY_WITH_FADE -> {
                             resumePlaybackWithFade()
                         }
-                        PAUSE_WITH_FADE -> {
-                            fadeJob?.cancel()
-                            fadeJob =
-                                serviceScope.launch {
-                                    animatePlayerVolume(player.volume, 0f, 500L)
-                                    player.pause()
-                                    player.seekTo(0)
-                                    isPausedByCall = false
-                                }
-                        }
+                        PAUSE_WITH_FADE -> fadeOutAndPause(pausedByCall = false)
+                        SET_LIVE_VOLUME -> noiseProcessor.volume = args.getFloat(EXTRA_VALUE)
+                        SET_LIVE_BALANCE -> noiseProcessor.balance = args.getFloat(EXTRA_VALUE)
                     }
                     return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                 }
@@ -205,30 +222,20 @@ class NoiseService : MediaSessionService() {
             player.setMediaSource(silenceSource)
             player.prepare()
 
-            launch {
-                settingsDataStore.volumeFlow.collect {
-                    noiseProcessor.volume = it
+            fun <T> applySetting(flow: Flow<T>, apply: (T) -> Unit) = launch {
+                flow.collect {
+                    apply(it)
                     flushPlayerBufferIfNotPlaying()
                 }
             }
-            launch {
-                settingsDataStore.noiseTypeFlow.collect {
-                    noiseProcessor.forceImmediateSwitch = !player.isPlaying
-                    noiseProcessor.noiseType = it
-                    flushPlayerBufferIfNotPlaying()
-                }
+            applySetting(settingsDataStore.volumeFlow) { noiseProcessor.volume = it }
+            applySetting(settingsDataStore.noiseTypeFlow) {
+                noiseProcessor.forceImmediateSwitch = !player.isPlaying
+                noiseProcessor.noiseType = it
             }
-            launch {
-                settingsDataStore.balanceFlow.collect {
-                    noiseProcessor.balance = it
-                    flushPlayerBufferIfNotPlaying()
-                }
-            }
-            launch {
-                settingsDataStore.spatialAudioFlow.collect {
-                    noiseProcessor.isSpatialAudioEnabled = it
-                    flushPlayerBufferIfNotPlaying()
-                }
+            applySetting(settingsDataStore.balanceFlow) { noiseProcessor.balance = it }
+            applySetting(settingsDataStore.spatialAudioFlow) {
+                noiseProcessor.isSpatialAudioEnabled = it
             }
 
             launch {
@@ -300,20 +307,24 @@ class NoiseService : MediaSessionService() {
     private fun handleCallState(isCallActive: Boolean) {
         if (isCallActive) {
             if (player.isPlaying) {
-                fadeJob?.cancel()
-                fadeJob =
-                    serviceScope.launch {
-                        animatePlayerVolume(player.volume, 0f, 500L)
-                        player.pause()
-                        player.seekTo(0)
-                        isPausedByCall = true
-                    }
+                fadeOutAndPause(pausedByCall = true)
             }
         } else {
             if (isPausedByCall) {
                 resumePlaybackWithFade()
             }
         }
+    }
+
+    private fun fadeOutAndPause(pausedByCall: Boolean) {
+        fadeJob?.cancel()
+        fadeJob =
+            serviceScope.launch {
+                animatePlayerVolume(player.volume, 0f, 500L)
+                player.pause()
+                player.seekTo(0)
+                isPausedByCall = pausedByCall
+            }
     }
 
     private fun resumePlaybackWithFade() {

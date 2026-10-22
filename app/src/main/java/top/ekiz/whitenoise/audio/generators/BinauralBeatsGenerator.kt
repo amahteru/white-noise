@@ -14,7 +14,6 @@ class BinauralBeatsGenerator : NoiseGenerator() {
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
         val carrier = 200.0
         val beat = 10.0
         phaseIncL = 2.0 * PI * (carrier - beat / 2.0) / sr

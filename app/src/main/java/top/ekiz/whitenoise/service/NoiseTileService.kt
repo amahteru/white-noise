@@ -1,13 +1,11 @@
 package top.ekiz.whitenoise.service
 
 import android.content.ComponentName
-import android.os.Bundle
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.util.Log
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
-import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
@@ -74,18 +72,7 @@ class NoiseTileService : TileService() {
     }
 
     private fun togglePlay(controller: MediaController) {
-        val isPlaying = controller.isPlaying
-        if (isPlaying) {
-            controller.sendCustomCommand(
-                SessionCommand(NoiseService.PAUSE_WITH_FADE, Bundle.EMPTY),
-                Bundle.EMPTY
-            )
-        } else {
-            controller.sendCustomCommand(
-                SessionCommand(NoiseService.PLAY_WITH_FADE, Bundle.EMPTY),
-                Bundle.EMPTY
-            )
-        }
+        controller.sendFadePlayPause(play = !controller.isPlaying)
     }
 
     private fun updateTileState(isPlaying: Boolean) {

@@ -14,7 +14,6 @@ class HeartbeatGenerator : NoiseGenerator() {
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
         phaseInc = 1.0 / sr
         piOverSr = PI / sr
     }

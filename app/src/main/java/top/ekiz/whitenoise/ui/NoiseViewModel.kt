@@ -1,10 +1,8 @@
 package top.ekiz.whitenoise.ui
 
-import android.os.Bundle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.session.MediaController
-import androidx.media3.session.SessionCommand
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +15,8 @@ import top.ekiz.whitenoise.data.SettingsDataStore
 import top.ekiz.whitenoise.domain.NoiseType
 import top.ekiz.whitenoise.domain.TimerManager
 import top.ekiz.whitenoise.service.NoiseService
+import top.ekiz.whitenoise.service.sendFadePlayPause
+import top.ekiz.whitenoise.service.sendLiveValue
 
 data class NoiseUiState(
     val volume: Float = 0.5f,
@@ -61,23 +61,19 @@ constructor(private val dataStore: SettingsDataStore, private val timerManager: 
             )
         }
 
-    private val runtimeFlow =
-        combine(
-            _isPlaying,
-            timerManager.activeRemainingMillis,
-            timerManager.totalTimerMillis,
-            timerManager.isTimerRunning
-        ) { isPlaying, remaining, total, isTimerRunning ->
-            arrayOf(isPlaying, remaining, total, isTimerRunning)
-        }
-
     val uiState: StateFlow<NoiseUiState> =
-        combine(settingsFlow, runtimeFlow) { settings, runtime ->
+        combine(
+                settingsFlow,
+                _isPlaying,
+                timerManager.activeRemainingMillis,
+                timerManager.totalTimerMillis,
+                timerManager.isTimerRunning
+            ) { settings, isPlaying, remaining, total, isTimerRunning ->
                 settings.copy(
-                    isPlaying = runtime[0] as Boolean,
-                    activeRemainingMillis = runtime[1] as Long,
-                    totalTimerMillis = runtime[2] as Long,
-                    isTimerRunning = runtime[3] as Boolean,
+                    isPlaying = isPlaying,
+                    activeRemainingMillis = remaining,
+                    totalTimerMillis = total,
+                    isTimerRunning = isTimerRunning,
                     isLoading = false
                 )
             }
@@ -102,17 +98,16 @@ constructor(private val dataStore: SettingsDataStore, private val timerManager: 
         val wasPlaying = _isPlaying.value
         _isPlaying.value = !wasPlaying
 
-        if (wasPlaying) {
-            controller.sendCustomCommand(
-                SessionCommand(NoiseService.PAUSE_WITH_FADE, Bundle.EMPTY),
-                Bundle.EMPTY
-            )
-        } else {
-            controller.sendCustomCommand(
-                SessionCommand(NoiseService.PLAY_WITH_FADE, Bundle.EMPTY),
-                Bundle.EMPTY
-            )
-        }
+        controller.sendFadePlayPause(play = !wasPlaying)
+    }
+
+    /** While a slider is being dragged: change the sound only, no disk write. */
+    fun previewVolume(volume: Float) {
+        mediaController?.sendLiveValue(NoiseService.SET_LIVE_VOLUME, volume)
+    }
+
+    fun previewBalance(balance: Float) {
+        mediaController?.sendLiveValue(NoiseService.SET_LIVE_BALANCE, balance)
     }
 
     fun setVolume(volume: Float) {

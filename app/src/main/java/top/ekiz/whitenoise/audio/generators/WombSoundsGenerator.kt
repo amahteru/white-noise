@@ -11,7 +11,6 @@ class WombSoundsGenerator : NoiseGenerator() {
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
         heartbeat.updateSampleRate(sr)
         fluidNoise.updateSampleRate(sr)
         phaseInc = 0.3 / sr

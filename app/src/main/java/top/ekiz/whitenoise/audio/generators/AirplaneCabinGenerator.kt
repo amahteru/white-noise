@@ -4,8 +4,8 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 class AirplaneCabinGenerator : NoiseGenerator() {
-    private var lastDeepBrownOutL = 0.0
-    private var lastDeepBrownOutR = 0.0
+    private val deepBrownL = deepBrownLowpass()
+    private val deepBrownR = deepBrownLowpass()
     private var cabinPhase = 0.0
     private var phaseInc = 0.0
 
@@ -14,29 +14,25 @@ class AirplaneCabinGenerator : NoiseGenerator() {
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
         phaseInc = 2.0 * PI * 160.0 / sr
     }
 
     override fun reset() {
-        lastDeepBrownOutL = 0.0
-        lastDeepBrownOutR = 0.0
+        deepBrownL.reset()
+        deepBrownR.reset()
         cabinPhase = 0.0
     }
 
     override fun process(whiteL: Float, whiteR: Float) {
-        val wL = whiteL.toDouble()
-        val wR = whiteR.toDouble()
-
-        lastDeepBrownOutL = lastDeepBrownOutL * 0.9901 + wL * 0.0099
-        lastDeepBrownOutR = lastDeepBrownOutR * 0.9901 + wR * 0.0099
+        val brownL = deepBrownL.process(whiteL.toDouble())
+        val brownR = deepBrownR.process(whiteR.toDouble())
 
         cabinPhase += phaseInc
         if (cabinPhase > 2.0 * PI) cabinPhase -= 2.0 * PI
 
         val drone = sin(cabinPhase) * 0.2
 
-        outL = (lastDeepBrownOutL * 4.0 + drone).toFloat()
-        outR = (lastDeepBrownOutR * 4.0 + drone).toFloat()
+        outL = (brownL * 4.0 + drone).toFloat()
+        outR = (brownR * 4.0 + drone).toFloat()
     }
 }

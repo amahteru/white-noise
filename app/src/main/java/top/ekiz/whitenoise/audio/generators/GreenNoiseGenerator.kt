@@ -16,8 +16,6 @@ class GreenNoiseGenerator : NoiseGenerator() {
     private var greenA2 = 0.867096
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
-
         val w0G = 2.0 * Math.PI * 500.0 / sr
         val alphaG = Math.sin(w0G) / 1.0
         val a0G = 1.0 + alphaG

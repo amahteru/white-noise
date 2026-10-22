@@ -31,8 +31,6 @@ class GreyNoiseGenerator : NoiseGenerator() {
     private var greyH_a2 = 0.18257
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
-
         val aL = Math.pow(10.0, 15.0 / 40.0)
         val w0L = 2.0 * Math.PI * 250.0 / sr
         val alphaL = Math.sin(w0L) / Math.sqrt(2.0)

@@ -17,6 +17,34 @@ import top.ekiz.whitenoise.domain.NoiseType
 import top.ekiz.whitenoise.ui.NoiseUiState
 import top.ekiz.whitenoise.ui.NoiseViewModel
 
+private val colorNoises =
+    listOf(
+        NoiseType.BLACK to "黑噪音",
+        NoiseType.DEEP_BROWN to "深棕噪音",
+        NoiseType.BROWN to "棕噪音",
+        NoiseType.PINK to "粉噪音",
+        NoiseType.WHITE to "白噪音",
+        NoiseType.BLUE to "蓝噪音",
+        NoiseType.VIOLET to "紫噪音",
+        NoiseType.GREEN to "绿噪音",
+        NoiseType.GREY to "灰噪音"
+    )
+
+private val otherNoises =
+    listOf(
+        NoiseType.VELVET to "天鹅绒噪音",
+        NoiseType.OCEAN_WAVES to "海浪声",
+        NoiseType.BINAURAL_BEATS to "双耳节拍",
+        NoiseType.ISOCHRONIC_TONES to "等时音",
+        NoiseType.SOLFEGGIO_FREQUENCIES to "冥想频率",
+        NoiseType.WOMB_SOUNDS to "子宫环境",
+        NoiseType.WIND to "风声",
+        NoiseType.AIRPLANE_CABIN to "飞机机舱",
+        NoiseType.HEARTBEAT to "心跳声",
+        NoiseType.RAIN to "雨声",
+        NoiseType.CAMPFIRE to "营火声"
+    )
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
@@ -49,34 +77,6 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
     }
 
     var selectedTab by remember { mutableIntStateOf(0) }
-
-    val colorNoises =
-        listOf(
-            Pair(NoiseType.BLACK, "黑噪音"),
-            Pair(NoiseType.DEEP_BROWN, "深棕噪音"),
-            Pair(NoiseType.BROWN, "棕噪音"),
-            Pair(NoiseType.PINK, "粉噪音"),
-            Pair(NoiseType.WHITE, "白噪音"),
-            Pair(NoiseType.BLUE, "蓝噪音"),
-            Pair(NoiseType.VIOLET, "紫噪音"),
-            Pair(NoiseType.GREEN, "绿噪音"),
-            Pair(NoiseType.GREY, "灰噪音")
-        )
-
-    val otherNoises =
-        listOf(
-            Pair(NoiseType.VELVET, "天鹅绒噪音"),
-            Pair(NoiseType.OCEAN_WAVES, "海浪声"),
-            Pair(NoiseType.BINAURAL_BEATS, "双耳节拍"),
-            Pair(NoiseType.ISOCHRONIC_TONES, "等时音"),
-            Pair(NoiseType.SOLFEGGIO_FREQUENCIES, "冥想频率"),
-            Pair(NoiseType.WOMB_SOUNDS, "子宫环境"),
-            Pair(NoiseType.WIND, "风声"),
-            Pair(NoiseType.AIRPLANE_CABIN, "飞机机舱"),
-            Pair(NoiseType.HEARTBEAT, "心跳声"),
-            Pair(NoiseType.RAIN, "雨声"),
-            Pair(NoiseType.CAMPFIRE, "营火声")
-        )
 
     Scaffold(
         topBar = {
@@ -126,26 +126,21 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
             }
         }
     ) { paddingValues ->
-        if (selectedTab == 0) {
+        if (selectedTab == 0 || selectedTab == 1) {
             SoundsScreen(
                 innerPadding = paddingValues,
                 currentType = uiState.noiseType,
-                noises = colorNoises,
-                onTypeSelected = { viewModel.setNoiseType(it) }
-            )
-        } else if (selectedTab == 1) {
-            SoundsScreen(
-                innerPadding = paddingValues,
-                currentType = uiState.noiseType,
-                noises = otherNoises,
+                noises = if (selectedTab == 0) colorNoises else otherNoises,
                 onTypeSelected = { viewModel.setNoiseType(it) }
             )
         } else {
             SettingsScreen(
                 innerPadding = paddingValues,
                 volume = uiState.volume,
+                onVolumePreview = { viewModel.previewVolume(it) },
                 onVolumeChanged = { viewModel.setVolume(it) },
                 balance = uiState.balance,
+                onBalancePreview = { viewModel.previewBalance(it) },
                 onBalanceChanged = { viewModel.setBalance(it) },
                 sleepTimer = uiState.sleepTimerMinutes,
                 onSleepTimerChanged = { viewModel.setSleepTimerMinutes(it) },

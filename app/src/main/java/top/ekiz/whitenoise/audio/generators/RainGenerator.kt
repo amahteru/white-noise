@@ -4,21 +4,8 @@ import kotlin.math.PI
 
 class RainGenerator : NoiseGenerator() {
 
-    private var pinkB0L = 0.0
-    private var pinkB1L = 0.0
-    private var pinkB2L = 0.0
-    private var pinkB3L = 0.0
-    private var pinkB4L = 0.0
-    private var pinkB5L = 0.0
-    private var pinkB6L = 0.0
-
-    private var pinkB0R = 0.0
-    private var pinkB1R = 0.0
-    private var pinkB2R = 0.0
-    private var pinkB3R = 0.0
-    private var pinkB4R = 0.0
-    private var pinkB5R = 0.0
-    private var pinkB6R = 0.0
+    private val pinkFilterL = PinkFilter()
+    private val pinkFilterR = PinkFilter()
 
     private var lp1L = 0.0
     private var lp2L = 0.0
@@ -39,27 +26,14 @@ class RainGenerator : NoiseGenerator() {
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
         piOverSr = PI / sr
 
         gustLfoInc = 0.02 / sr
     }
 
     override fun reset() {
-        pinkB0L = 0.0
-        pinkB1L = 0.0
-        pinkB2L = 0.0
-        pinkB3L = 0.0
-        pinkB4L = 0.0
-        pinkB5L = 0.0
-        pinkB6L = 0.0
-        pinkB0R = 0.0
-        pinkB1R = 0.0
-        pinkB2R = 0.0
-        pinkB3R = 0.0
-        pinkB4R = 0.0
-        pinkB5R = 0.0
-        pinkB6R = 0.0
+        pinkFilterL.reset()
+        pinkFilterR.reset()
 
         lp1L = 0.0
         lp2L = 0.0
@@ -77,27 +51,8 @@ class RainGenerator : NoiseGenerator() {
         val wL = whiteL.toDouble()
         val wR = whiteR.toDouble()
 
-        pinkB0L = 0.99886 * pinkB0L + wL * 0.0555179
-        pinkB1L = 0.99332 * pinkB1L + wL * 0.0750759
-        pinkB2L = 0.96900 * pinkB2L + wL * 0.1538520
-        pinkB3L = 0.86650 * pinkB3L + wL * 0.3104856
-        pinkB4L = 0.55000 * pinkB4L + wL * 0.5329522
-        pinkB5L = -0.7616 * pinkB5L - wL * 0.0168980
-        val pinkOutL =
-            pinkB0L + pinkB1L + pinkB2L + pinkB3L + pinkB4L + pinkB5L + pinkB6L + wL * 0.5362
-        pinkB6L = wL * 0.115926
-        val pinkL = pinkOutL * 0.11
-
-        pinkB0R = 0.99886 * pinkB0R + wR * 0.0555179
-        pinkB1R = 0.99332 * pinkB1R + wR * 0.0750759
-        pinkB2R = 0.96900 * pinkB2R + wR * 0.1538520
-        pinkB3R = 0.86650 * pinkB3R + wR * 0.3104856
-        pinkB4R = 0.55000 * pinkB4R + wR * 0.5329522
-        pinkB5R = -0.7616 * pinkB5R - wR * 0.0168980
-        val pinkOutR =
-            pinkB0R + pinkB1R + pinkB2R + pinkB3R + pinkB4R + pinkB5R + pinkB6R + wR * 0.5362
-        pinkB6R = wR * 0.115926
-        val pinkR = pinkOutR * 0.11
+        val pinkL = pinkFilterL.process(wL) * 0.11
+        val pinkR = pinkFilterR.process(wR) * 0.11
 
         gustLfoPhase += gustLfoInc
         if (gustLfoPhase >= 1.0) gustLfoPhase -= 1.0

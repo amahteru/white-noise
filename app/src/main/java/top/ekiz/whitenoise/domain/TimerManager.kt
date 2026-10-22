@@ -56,10 +56,7 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
                     startTicker(remaining, endTime)
                 } else {
 
-                    settingsDataStore.saveTimerEndTime(0L)
-                    settingsDataStore.saveTimerRemaining(0L)
-                    settingsDataStore.saveTotalTimerMillis(0L)
-                    _totalTimerMillis.value = 0L
+                    clearTimer()
                 }
             } else {
 
@@ -77,14 +74,14 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
         if (durationMs <= 0) return
 
         scope.launch {
+            var newTotal: Long? = null
             if (!isResume || _totalTimerMillis.value <= 0L) {
                 _totalTimerMillis.value = durationMs
-                settingsDataStore.saveTotalTimerMillis(durationMs)
+                newTotal = durationMs
             }
             val endTime = System.currentTimeMillis() + durationMs
 
-            settingsDataStore.saveTimerRemaining(0L)
-            settingsDataStore.saveTimerEndTime(endTime)
+            settingsDataStore.saveTimerState(endTime = endTime, remaining = 0L, totalMillis = newTotal)
 
             startTicker(durationMs, endTime)
         }
@@ -97,10 +94,7 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
             val remaining = _activeRemainingMillis.value
             _isTimerRunning.value = false
 
-            settingsDataStore.saveTimerEndTime(0L)
-            if (remaining > 0) {
-                settingsDataStore.saveTimerRemaining(remaining)
-            }
+            settingsDataStore.saveTimerState(endTime = 0L, remaining = remaining.coerceAtLeast(0L))
 
             _timerEvents.tryEmit(TimerEvent.TIMER_CANCELLED)
         }
@@ -110,16 +104,16 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
         tickerJob?.cancel()
 
         scope.launch {
-            _activeRemainingMillis.value = 0L
-            _totalTimerMillis.value = 0L
-            _isTimerRunning.value = false
-
-            settingsDataStore.saveTimerEndTime(0L)
-            settingsDataStore.saveTimerRemaining(0L)
-            settingsDataStore.saveTotalTimerMillis(0L)
-
+            clearTimer()
             _timerEvents.tryEmit(TimerEvent.TIMER_CANCELLED)
         }
+    }
+
+    private suspend fun clearTimer() {
+        _activeRemainingMillis.value = 0L
+        _totalTimerMillis.value = 0L
+        _isTimerRunning.value = false
+        settingsDataStore.saveTimerState(endTime = 0L, remaining = 0L, totalMillis = 0L)
     }
 
     private fun startTicker(durationMs: Long, endTime: Long) {
@@ -142,15 +136,7 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
                     if (remaining > 0) {
                         _activeRemainingMillis.value = remaining
                     } else {
-
-                        _activeRemainingMillis.value = 0L
-                        _totalTimerMillis.value = 0L
-                        _isTimerRunning.value = false
-
-                        settingsDataStore.saveTimerEndTime(0L)
-                        settingsDataStore.saveTimerRemaining(0L)
-                        settingsDataStore.saveTotalTimerMillis(0L)
-
+                        clearTimer()
                         _timerEvents.tryEmit(TimerEvent.TIMER_FINISHED)
                         break
                     }

@@ -14,8 +14,6 @@ class IsochronicTonesGenerator : NoiseGenerator() {
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
-
         modInc = 4.0 / sr
         carrierInc = 2.0 * PI * 200.0 / sr
     }

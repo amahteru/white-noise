@@ -18,7 +18,6 @@ class WindGenerator : NoiseGenerator() {
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
         piOverSr = PI / sr
         lfoAlpha = 2.0 * PI * 0.15 / sr
     }

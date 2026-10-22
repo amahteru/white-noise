@@ -11,14 +11,14 @@ class OceanWavesGenerator : NoiseGenerator() {
     private var currentAmp = 1.0
 
     private val pink = PinkNoiseGenerator()
+    private var sampleRate = 44100.0
 
     init {
         updateSampleRate(44100.0)
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
-        pink.updateSampleRate(sr)
+        sampleRate = sr
         nextWave()
     }
 

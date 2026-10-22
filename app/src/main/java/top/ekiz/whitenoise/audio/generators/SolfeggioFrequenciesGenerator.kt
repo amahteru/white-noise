@@ -12,7 +12,6 @@ class SolfeggioFrequenciesGenerator : NoiseGenerator() {
     }
 
     override fun updateSampleRate(sr: Double) {
-        super.updateSampleRate(sr)
         val freq = 528.0
         phaseInc = 2.0 * PI * freq / sr
     }

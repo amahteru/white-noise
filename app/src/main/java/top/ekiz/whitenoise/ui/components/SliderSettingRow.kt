@@ -14,6 +14,7 @@ fun SliderSettingRow(
     contentDescription: String,
     value: Float,
     onValueChange: (Float) -> Unit,
+    onValueChangeFinished: () -> Unit = {},
     valueRange: ClosedFloatingPointRange<Float>,
     labels: List<String>? = null,
     steps: Int = 9
@@ -26,6 +27,7 @@ fun SliderSettingRow(
                 Slider(
                     value = value,
                     onValueChange = onValueChange,
+                    onValueChangeFinished = onValueChangeFinished,
                     valueRange = valueRange,
                     steps = steps,
                     modifier = Modifier.fillMaxWidth()

@@ -79,8 +79,8 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.53.1")
     ksp("com.google.dagger:hilt-compiler:2.53.1")
     
-    implementation("androidx.media3:media3-exoplayer:1.3.1")
-    implementation("androidx.media3:media3-session:1.3.1")
+    implementation("androidx.media3:media3-exoplayer:1.9.4")
+    implementation("androidx.media3:media3-session:1.9.4")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
