@@ -1,34 +1,58 @@
 package top.ekiz.whitenoise.ui.components
 
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import top.ekiz.whitenoise.ui.theme.spacing
 
 @Composable
 fun SliderSettingRow(
     icon: ImageVector,
-    title: String,
+    contentDescription: String,
     value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
-    steps: Int = 0
+    labels: List<String>? = null,
+    steps: Int = 9
 ) {
     ListItem(
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        headlineContent = { Text(title) },
-        leadingContent = { Icon(imageVector = icon, contentDescription = null) },
+        headlineContent = { Text(contentDescription) },
+        leadingContent = { Icon(imageVector = icon, contentDescription = contentDescription) },
         supportingContent = {
-            Slider(
-                value = value,
-                onValueChange = onValueChange,
-                valueRange = valueRange,
-                steps = steps
-            )
+            Column(modifier = Modifier.padding(top = MaterialTheme.spacing.small)) {
+                Slider(
+                    value = value,
+                    onValueChange = onValueChange,
+                    valueRange = valueRange,
+                    steps = steps,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (labels != null) {
+                    Row(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(horizontal = MaterialTheme.spacing.small)
+                    ) {
+                        labels.forEachIndexed { index, label ->
+                            val textAlign = when (index) {
+                                0 -> TextAlign.Start
+                                labels.lastIndex -> TextAlign.End
+                                else -> TextAlign.Center
+                            }
+                            Text(
+                                text = label,
+                                modifier = Modifier.weight(1f),
+                                textAlign = textAlign,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
         }
     )
 }
