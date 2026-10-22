@@ -17,15 +17,13 @@ import kotlinx.coroutines.launch
 import top.ekiz.whitenoise.data.SettingsDataStore
 
 enum class TimerEvent {
-    START_FADE_OUT,
-    TIMER_FINISHED,
-    TIMER_CANCELLED
+    TIMER_UPDATED,
+    TIMER_FINISHED
 }
 
 @Singleton
 class TimerManager @Inject constructor(private val settingsDataStore: SettingsDataStore) {
     companion object {
-        /** Playback fades out over this last stretch of the timer. */
         const val FADE_OUT_MILLIS = 60_000L
     }
 
@@ -89,8 +87,7 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
             settingsDataStore.saveTimerState(endTime = endTime, remaining = 0L, totalMillis = newTotal)
 
             startTicker(durationMs, endTime)
-            // A restart can land mid fade-out; let the player recompute its volume.
-            _timerEvents.tryEmit(TimerEvent.TIMER_CANCELLED)
+            _timerEvents.tryEmit(TimerEvent.TIMER_UPDATED)
         }
     }
 
@@ -103,11 +100,10 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
 
             settingsDataStore.saveTimerState(endTime = 0L, remaining = remaining.coerceAtLeast(0L))
 
-            _timerEvents.tryEmit(TimerEvent.TIMER_CANCELLED)
+            _timerEvents.tryEmit(TimerEvent.TIMER_UPDATED)
         }
     }
 
-    /** Replaces the time left on a paused timer, so resuming it runs for the new duration. */
     fun setPausedDuration(durationMs: Long) {
         if (durationMs <= 0) {
             cancelTimer()
@@ -130,7 +126,7 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
 
         scope.launch {
             clearTimer()
-            _timerEvents.tryEmit(TimerEvent.TIMER_CANCELLED)
+            _timerEvents.tryEmit(TimerEvent.TIMER_UPDATED)
         }
     }
 
@@ -153,14 +149,13 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
                 while (true) {
                     val remaining = endTime - System.currentTimeMillis()
 
-                    // Publish the remaining time first: the fade-out handler reads it.
                     if (remaining > 0) {
                         _activeRemainingMillis.value = remaining
                     }
 
                     if (remaining <= FADE_OUT_MILLIS && !fadeTriggered) {
                         fadeTriggered = true
-                        _timerEvents.tryEmit(TimerEvent.START_FADE_OUT)
+                        _timerEvents.tryEmit(TimerEvent.TIMER_UPDATED)
                     }
 
                     if (remaining <= 0) {

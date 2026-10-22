@@ -18,9 +18,6 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
     @Volatile var isSpatialAudioEnabled: Boolean = false
     @Volatile var forceImmediateSwitch: Boolean = false
 
-    @Volatile var pcmFadeMultiplier: Float = 1f
-    @Volatile private var pcmFadeStep: Float = 0f
-
     private var currentNoiseType = noiseType
 
     private var currentGenerator: NoiseGenerator = NoiseGeneratorFactory.create(noiseType)
@@ -75,24 +72,6 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
         fadingGenerator?.reset()
     }
 
-    fun startFadeIn(durationMs: Long) {
-        if (durationMs <= 0L) {
-            pcmFadeMultiplier = 1f
-            pcmFadeStep = 0f
-            return
-        }
-        pcmFadeMultiplier = 0f
-        val sr =
-            if (inputAudioFormat.sampleRate != -1) {
-                inputAudioFormat.sampleRate
-            } else {
-                44100
-            }
-
-        val totalFrames = (durationMs / 1000f) * sr
-        pcmFadeStep = 1f / totalFrames
-    }
-
     override fun queueInput(inputBuffer: ByteBuffer) {
         val remaining = inputBuffer.remaining()
         if (remaining == 0) return
@@ -122,16 +101,8 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
             forceImmediateSwitch = false
         }
 
-        val fadeStep = pcmFadeStep
-        var currentFadeMult = pcmFadeMultiplier
-
         var i = 0
         while (i < numShorts) {
-            if (currentFadeMult < 1f && fadeStep > 0f) {
-                currentFadeMult = min(1f, currentFadeMult + fadeStep)
-            }
-            val effectiveVolume = currentVolume * currentFadeMult
-
             rngState = rngState xor (rngState shl 13)
             rngState = rngState xor (rngState ushr 7)
             rngState = rngState xor (rngState shl 17)
@@ -204,19 +175,17 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
             if (outputR > 1f) outputR = 1f
             if (outputR < -1f) outputR = -1f
 
-            val sampleL = (outputL * leftVol * Short.MAX_VALUE * effectiveVolume).toInt().toShort()
+            val sampleL = (outputL * leftVol * Short.MAX_VALUE * currentVolume).toInt().toShort()
             buffer.putShort(sampleL)
             i++
 
             if (isStereo) {
                 val sampleR =
-                    (outputR * rightVol * Short.MAX_VALUE * effectiveVolume).toInt().toShort()
+                    (outputR * rightVol * Short.MAX_VALUE * currentVolume).toInt().toShort()
                 buffer.putShort(sampleR)
                 i++
             }
         }
-
-        pcmFadeMultiplier = currentFadeMult
 
         buffer.flip()
     }

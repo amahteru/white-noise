@@ -67,7 +67,6 @@ fun SettingsScreen(
                 )
         )
 
-        // Drafts hold the value while a slider is dragged; it is saved once, on release.
         var volumeDraft by remember { mutableStateOf<Float?>(null) }
         LaunchedEffect(volume) { volumeDraft = null }
         SliderSettingRow(
@@ -114,7 +113,6 @@ fun SettingsScreen(
 
         var showTimePicker by remember { mutableStateOf(false) }
 
-        // Committing on release also stops a running timer from restarting on every drag frame.
         var sleepTimerDraft by remember { mutableStateOf<Int?>(null) }
         LaunchedEffect(sleepTimer) { sleepTimerDraft = null }
         val shownSleepTimer = sleepTimerDraft ?: sleepTimer

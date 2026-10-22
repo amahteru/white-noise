@@ -1,6 +1,5 @@
 package top.ekiz.whitenoise.audio.generators
 
-/** Paul Kellet's pinking filter; returns the unscaled pink sample for one channel. */
 internal class PinkFilter {
     private var b0 = 0.0
     private var b1 = 0.0

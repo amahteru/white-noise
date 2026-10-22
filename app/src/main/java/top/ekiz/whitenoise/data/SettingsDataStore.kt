@@ -47,7 +47,6 @@ class SettingsDataStore @Inject constructor(@ApplicationContext private val cont
     val noiseTypeFlow: Flow<NoiseType> =
         flowOf(NOISE_TYPE_KEY, NoiseType.WHITE.name)
             .map { name -> NoiseType.entries.firstOrNull { it.name == name } ?: NoiseType.WHITE }
-            .distinctUntilChanged()
 
     val sleepTimerFlow: Flow<Int> = flowOf(SLEEP_TIMER_KEY, 0)
     val timerEndTimeFlow: Flow<Long> = flowOf(TIMER_END_TIME_KEY, 0L)
@@ -69,7 +68,6 @@ class SettingsDataStore @Inject constructor(@ApplicationContext private val cont
 
     suspend fun saveSpatialAudio(enabled: Boolean) = save(SPATIAL_AUDIO_KEY, enabled)
 
-    /** Writes all three timer fields in one transaction instead of three separate file writes. */
     suspend fun saveTimerState(endTime: Long, remaining: Long, totalMillis: Long? = null) {
         context.dataStore.edit {
             it[TIMER_END_TIME_KEY] = endTime

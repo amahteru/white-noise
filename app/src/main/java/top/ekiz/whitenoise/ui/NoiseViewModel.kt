@@ -101,7 +101,6 @@ constructor(private val dataStore: SettingsDataStore, private val timerManager: 
         controller.sendFadePlayPause(play = !wasPlaying)
     }
 
-    /** While a slider is being dragged: change the sound only, no disk write. */
     fun previewVolume(volume: Float) {
         mediaController?.sendLiveValue(NoiseService.SET_LIVE_VOLUME, volume)
     }

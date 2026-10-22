@@ -41,7 +41,6 @@ fun MediaController.sendFadePlayPause(play: Boolean) {
     sendCustomCommand(SessionCommand(action, Bundle.EMPTY), Bundle.EMPTY)
 }
 
-/** Applies a volume/balance value to the audio immediately, without persisting it. */
 fun MediaController.sendLiveValue(action: String, value: Float) {
     sendCustomCommand(
         SessionCommand(action, Bundle.EMPTY),
@@ -70,7 +69,14 @@ class NoiseService : MediaSessionService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var audioManager: AudioManager
-    private var modeListener: Any? = null
+    private val modeListener =
+        AudioManager.OnModeChangedListener { mode ->
+            handleCallState(
+                mode == AudioManager.MODE_IN_CALL ||
+                    mode == AudioManager.MODE_RINGTONE ||
+                    mode == AudioManager.MODE_IN_COMMUNICATION
+            )
+        }
     private var isPausedByCall = false
     private var isPausedByDeviceDisconnect = false
     private var fadeJob: Job? = null
@@ -143,8 +149,6 @@ class NoiseService : MediaSessionService() {
                 )
                 .setHandleAudioBecomingNoisy(true)
                 .setWakeMode(C.WAKE_MODE_LOCAL)
-                // Audio-only: let the playback loop sleep until the AudioTrack needs data
-                // instead of polling every 10 ms.
                 .experimentalSetDynamicSchedulingEnabled(true)
                 .build()
 
@@ -204,8 +208,6 @@ class NoiseService : MediaSessionService() {
                 }
             }
 
-        // Play/pause from the notification, lock screen or headset keys goes through the same
-        // fades as the app; otherwise the volume left at 0 by a fade-out is never restored.
         val sessionPlayer =
             object : ForwardingPlayer(player) {
                 override fun play() = resumePlaybackWithFade()
@@ -255,22 +257,15 @@ class NoiseService : MediaSessionService() {
             launch {
                 timerManager.timerEvents.collect { event ->
                     when (event) {
-                        TimerEvent.START_FADE_OUT -> {
+                        TimerEvent.TIMER_UPDATED -> {
                             if (player.isPlaying) {
                                 fadeJob?.cancel()
-                                fadeJob = serviceScope.launch { followTimerVolume(0L) }
+                                fadeJob = serviceScope.launch { followTimerVolume(1000L) }
                             }
                         }
                         TimerEvent.TIMER_FINISHED -> {
                             fadeJob?.cancel()
                             player.pause()
-                            player.seekTo(0)
-                        }
-                        TimerEvent.TIMER_CANCELLED -> {
-                            if (player.isPlaying && !isPausedByCall) {
-                                fadeJob?.cancel()
-                                fadeJob = serviceScope.launch { followTimerVolume(1000L) }
-                            }
                         }
                     }
                 }
@@ -295,20 +290,7 @@ class NoiseService : MediaSessionService() {
     private fun startCallMonitor() {
         audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
         audioManager.registerAudioDeviceCallback(audioDeviceCallback, null)
-        if (modeListener == null) {
-            modeListener =
-                AudioManager.OnModeChangedListener { mode ->
-                    val isCallActive =
-                        mode == AudioManager.MODE_IN_CALL ||
-                            mode == AudioManager.MODE_RINGTONE ||
-                            mode == AudioManager.MODE_IN_COMMUNICATION
-                    handleCallState(isCallActive)
-                }
-            audioManager.addOnModeChangedListener(
-                mainExecutor,
-                modeListener as AudioManager.OnModeChangedListener
-            )
-        }
+        audioManager.addOnModeChangedListener(mainExecutor, modeListener)
     }
 
     private fun handleCallState(isCallActive: Boolean) {
@@ -329,7 +311,6 @@ class NoiseService : MediaSessionService() {
             serviceScope.launch {
                 animatePlayerVolume(player.volume, 0f, 500L)
                 player.pause()
-                player.seekTo(0)
                 isPausedByCall = pausedByCall
             }
     }
@@ -338,7 +319,7 @@ class NoiseService : MediaSessionService() {
         fadeJob?.cancel()
         fadeJob =
             serviceScope.launch {
-                noiseProcessor.startFadeIn(1000L)
+                player.volume = 0f
                 flushPlayerBuffer()
                 if (
                     player.playbackState == Player.STATE_IDLE ||
@@ -349,16 +330,10 @@ class NoiseService : MediaSessionService() {
                 }
                 player.play()
                 isPausedByCall = false
-
-                player.volume = 0f
-                followTimerVolume(200L)
+                followTimerVolume(1000L)
             }
     }
 
-    /**
-     * Where the sleep timer wants the volume now: full, or partway down its fade-out. The fade
-     * spans the last [TimerManager.FADE_OUT_MILLIS], or the whole timer if it is shorter.
-     */
     private fun timerVolume(): Float {
         if (!timerManager.isTimerRunning.value) return 1f
         return (timerManager.activeRemainingMillis.value.toFloat() / fadeWindowMillis())
@@ -370,11 +345,6 @@ class NoiseService : MediaSessionService() {
             .takeIf { it > 0L }
             ?.coerceAtMost(TimerManager.FADE_OUT_MILLIS) ?: TimerManager.FADE_OUT_MILLIS
 
-    /**
-     * Ramps to [timerVolume] over [rampMs], then keeps fading out if the timer is in its fade
-     * window. Every resume goes through here, so pausing, a call, or starting playback late
-     * never loses the fade-out.
-     */
     private suspend fun followTimerVolume(rampMs: Long) {
         animatePlayerVolume(player.volume, timerVolume(), rampMs)
         val remaining = timerManager.activeRemainingMillis.value
@@ -403,11 +373,7 @@ class NoiseService : MediaSessionService() {
 
     override fun onDestroy() {
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
-        if (modeListener != null) {
-            audioManager.removeOnModeChangedListener(
-                modeListener as AudioManager.OnModeChangedListener
-            )
-        }
+        audioManager.removeOnModeChangedListener(modeListener)
         mediaSession?.run {
             player.release()
             release()
