@@ -125,14 +125,15 @@ constructor(private val dataStore: SettingsDataStore, private val timerManager: 
     fun setSleepTimerMinutes(minutes: Int) {
         viewModelScope.launch {
             dataStore.saveSleepTimer(minutes)
+            val totalMillis = minutes * 60000L
             if (timerManager.isTimerRunning.value) {
-
-                val totalMillis = minutes * 60000L
                 if (totalMillis > 0) {
                     timerManager.startTimer(totalMillis, isResume = false)
                 } else {
                     timerManager.pauseTimer()
                 }
+            } else if (timerManager.activeRemainingMillis.value > 0L) {
+                timerManager.setPausedDuration(totalMillis)
             }
         }
     }

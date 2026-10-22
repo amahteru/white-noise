@@ -100,6 +100,24 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
         }
     }
 
+    /** Replaces the time left on a paused timer, so resuming it runs for the new duration. */
+    fun setPausedDuration(durationMs: Long) {
+        if (durationMs <= 0) {
+            cancelTimer()
+            return
+        }
+        _totalTimerMillis.value = durationMs
+        _activeRemainingMillis.value = durationMs
+
+        scope.launch {
+            settingsDataStore.saveTimerState(
+                endTime = 0L,
+                remaining = durationMs,
+                totalMillis = durationMs
+            )
+        }
+    }
+
     fun cancelTimer() {
         tickerJob?.cancel()
 
