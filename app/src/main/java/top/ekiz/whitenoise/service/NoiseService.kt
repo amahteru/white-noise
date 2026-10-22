@@ -6,6 +6,7 @@ import android.media.AudioManager
 import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -203,7 +204,20 @@ class NoiseService : MediaSessionService() {
                 }
             }
 
-        mediaSession = MediaSession.Builder(this, player).setCallback(sessionCallback).build()
+        // Play/pause from the notification, lock screen or headset keys goes through the same
+        // fades as the app; otherwise the volume left at 0 by a fade-out is never restored.
+        val sessionPlayer =
+            object : ForwardingPlayer(player) {
+                override fun play() = resumePlaybackWithFade()
+
+                override fun pause() = fadeOutAndPause(pausedByCall = false)
+
+                override fun setPlayWhenReady(playWhenReady: Boolean) =
+                    if (playWhenReady) play() else pause()
+            }
+
+        mediaSession =
+            MediaSession.Builder(this, sessionPlayer).setCallback(sessionCallback).build()
 
         val durationUs = 365L * 24 * 60 * 60 * 1000 * 1000
         val silenceSource = SilenceMediaSource(durationUs)

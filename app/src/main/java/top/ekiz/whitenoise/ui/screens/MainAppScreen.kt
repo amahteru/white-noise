@@ -62,9 +62,9 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
             contract = ActivityResultContracts.RequestPermission(),
             onResult = { isGranted ->
                 hasNotificationPermission = isGranted
-                if (isGranted) {
-                    viewModel.togglePlayPause()
-                }
+                // Media session notifications are exempt from POST_NOTIFICATIONS, so a denial
+                // only hides the notification; playback must not depend on it.
+                viewModel.togglePlayPause()
             }
         )
 

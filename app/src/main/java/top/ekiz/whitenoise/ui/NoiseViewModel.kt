@@ -43,7 +43,7 @@ constructor(private val dataStore: SettingsDataStore, private val timerManager: 
     private val _isPlaying = MutableStateFlow(false)
 
     private val settingsFlow =
-        combine(
+        combine<Any, NoiseUiState>(
             dataStore.volumeFlow,
             dataStore.balanceFlow,
             dataStore.noiseTypeFlow,

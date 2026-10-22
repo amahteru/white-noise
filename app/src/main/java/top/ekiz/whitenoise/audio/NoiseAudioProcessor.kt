@@ -70,8 +70,7 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
         return inputAudioFormat
     }
 
-    override fun onFlush() {
-        super.onFlush()
+    override fun onFlush(streamMetadata: AudioProcessor.StreamMetadata) {
         currentGenerator.reset()
         fadingGenerator?.reset()
     }
