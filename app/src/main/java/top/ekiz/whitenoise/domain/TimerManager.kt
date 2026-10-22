@@ -44,7 +44,6 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
     private var tickerJob: Job? = null
 
     init {
-
         scope.launch {
             val total = settingsDataStore.totalTimerMillisFlow.first()
             if (total > 0L) {
@@ -55,14 +54,11 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
             if (endTime > 0L) {
                 val remaining = endTime - System.currentTimeMillis()
                 if (remaining > 0) {
-
                     startTicker(remaining, endTime)
                 } else {
-
                     clearTimer()
                 }
             } else {
-
                 val remaining = settingsDataStore.timerRemainingFlow.first()
                 if (remaining > 0L) {
                     _activeRemainingMillis.value = remaining
@@ -84,7 +80,11 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
             }
             val endTime = System.currentTimeMillis() + durationMs
 
-            settingsDataStore.saveTimerState(endTime = endTime, remaining = 0L, totalMillis = newTotal)
+            settingsDataStore.saveTimerState(
+                endTime = endTime,
+                remaining = 0L,
+                totalMillis = newTotal
+            )
 
             startTicker(durationMs, endTime)
             _timerEvents.tryEmit(TimerEvent.TIMER_UPDATED)

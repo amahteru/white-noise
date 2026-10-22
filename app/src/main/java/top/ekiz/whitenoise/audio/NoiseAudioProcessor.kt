@@ -11,7 +11,6 @@ import top.ekiz.whitenoise.domain.NoiseType
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class NoiseAudioProcessor : BaseAudioProcessor() {
-
     @Volatile var volume: Float = 0.5f
     @Volatile var balance: Float = 0f
     @Volatile var noiseType: NoiseType = NoiseType.WHITE

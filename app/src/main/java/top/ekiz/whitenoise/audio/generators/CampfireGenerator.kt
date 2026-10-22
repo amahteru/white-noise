@@ -35,7 +35,6 @@ class CampfireGenerator : NoiseGenerator() {
     private var randomSeed = 123456789
 
     init {
-
         updateSampleRate(44100.0)
     }
 

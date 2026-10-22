@@ -27,7 +27,6 @@ import top.ekiz.whitenoise.ui.theme.WhiteNoiseTheme
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
     private val viewModel: NoiseViewModel by viewModels()
     private var controllerFuture: ListenableFuture<MediaController>? = null
 

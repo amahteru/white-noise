@@ -24,7 +24,6 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 
 @Singleton
 class SettingsDataStore @Inject constructor(@ApplicationContext private val context: Context) {
-
     companion object {
         val VOLUME_KEY = floatPreferencesKey("volume")
         val NOISE_TYPE_KEY = stringPreferencesKey("noise_type")

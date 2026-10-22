@@ -24,7 +24,6 @@ fun SoundsScreen(
     noises: List<Pair<NoiseType, String>>,
     onTypeSelected: (NoiseType) -> Unit
 ) {
-
     LazyColumn(
         contentPadding =
             PaddingValues(

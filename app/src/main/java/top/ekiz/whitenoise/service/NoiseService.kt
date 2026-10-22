@@ -55,7 +55,6 @@ fun MediaController.sendLiveValue(action: String, value: Float) {
 )
 @AndroidEntryPoint
 class NoiseService : MediaSessionService() {
-
     companion object {
         const val PLAY_WITH_FADE = "PLAY_WITH_FADE"
         const val PAUSE_WITH_FADE = "PAUSE_WITH_FADE"
@@ -102,10 +101,8 @@ class NoiseService : MediaSessionService() {
                             val stillConnected = currentDevices.any { it.isExternalDevice() }
 
                             if (stillConnected) {
-
                                 resumePlaybackWithFade()
                             } else {
-
                                 isPausedByDeviceDisconnect = true
                             }
                         }
@@ -300,7 +297,6 @@ class NoiseService : MediaSessionService() {
     }
 
     private fun flushPlayerBuffer() {
-
         val targetPos = if (player.currentPosition == 0L) 1L else 0L
         player.seekTo(targetPos)
     }

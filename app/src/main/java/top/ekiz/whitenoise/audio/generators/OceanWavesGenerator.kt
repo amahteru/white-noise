@@ -29,7 +29,6 @@ class OceanWavesGenerator : NoiseGenerator() {
     }
 
     private fun nextWave() {
-
         currentDuration = 4.0 + Random.nextDouble() * 4.0
         phaseInc = 1.0 / (currentDuration * sampleRate)
 

@@ -142,15 +142,10 @@ fun SettingsScreen(
 
         ListItem(
             headlineContent = { Text("指定时间关闭") },
-            supportingContent = {
-                Text(
-                    "将在 %02d:%02d 自动关闭".format(
-                        targetHour,
-                        targetMinute
-                    )
-                )
+            supportingContent = { Text("将在 %02d:%02d 自动关闭".format(targetHour, targetMinute)) },
+            leadingContent = {
+                Icon(painterResource(R.drawable.ic_schedule), contentDescription = null)
             },
-            leadingContent = { Icon(painterResource(R.drawable.ic_schedule), contentDescription = null) },
             trailingContent = {
                 OutlinedButton(onClick = { showTimePicker = true }) { Text("设定时间") }
             }
@@ -268,7 +263,9 @@ fun SettingsScreen(
                 ),
             headlineContent = { Text("启用每日定时关闭") },
             supportingContent = { Text(dailyStopSummary(dailyStop)) },
-            leadingContent = { Icon(painterResource(R.drawable.ic_alarm), contentDescription = null) },
+            leadingContent = {
+                Icon(painterResource(R.drawable.ic_alarm), contentDescription = null)
+            },
             trailingContent = { Switch(checked = dailyStop.enabled, onCheckedChange = null) }
         )
 
@@ -276,7 +273,9 @@ fun SettingsScreen(
         ListItem(
             headlineContent = { Text("关闭时间") },
             supportingContent = { Text("%02d:%02d".format(dailyStop.hour, dailyStop.minute)) },
-            leadingContent = { Icon(painterResource(R.drawable.ic_schedule), contentDescription = null) },
+            leadingContent = {
+                Icon(painterResource(R.drawable.ic_schedule), contentDescription = null)
+            },
             trailingContent = {
                 OutlinedButton(onClick = { showDailyStopPicker = true }) { Text("设定时间") }
             }
@@ -345,7 +344,10 @@ fun SettingsScreen(
                 ),
             headlineContent = { Text("3D 空间音频 (双耳渲染)") },
             leadingContent = {
-                Icon(painter = painterResource(R.drawable.ic_surround_sound), contentDescription = null)
+                Icon(
+                    painter = painterResource(R.drawable.ic_surround_sound),
+                    contentDescription = null
+                )
             },
             trailingContent = { Switch(checked = isSpatialAudioEnabled, onCheckedChange = null) }
         )

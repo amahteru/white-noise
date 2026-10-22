@@ -3,7 +3,6 @@ package top.ekiz.whitenoise.audio.generators
 import kotlin.math.PI
 
 class RainGenerator : NoiseGenerator() {
-
     private val pinkFilterL = PinkFilter()
     private val pinkFilterR = PinkFilter()
 

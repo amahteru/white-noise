@@ -39,7 +39,6 @@ class NoiseViewModel
 @Inject
 constructor(private val dataStore: SettingsDataStore, private val timerManager: TimerManager) :
     ViewModel() {
-
     private var mediaController: MediaController? = null
 
     private val _isPlaying = MutableStateFlow(false)
