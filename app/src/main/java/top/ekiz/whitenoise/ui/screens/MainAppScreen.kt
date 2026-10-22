@@ -89,20 +89,19 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
                             else -> "设置"
                         }
                     )
-                },
-                actions = {
-                    if (selectedTab == 0 || selectedTab == 1) {
-                        IconButton(onClick = { onPlayPauseClicked() }) {
-                            Icon(
-                                imageVector =
-                                    if (uiState.isPlaying) Icons.Filled.Pause
-                                    else Icons.Filled.PlayArrow,
-                                contentDescription = if (uiState.isPlaying) "暂停" else "播放"
-                            )
-                        }
-                    }
                 }
             )
+        },
+        floatingActionButton = {
+            if (selectedTab == 0 || selectedTab == 1) {
+                FloatingActionButton(onClick = { onPlayPauseClicked() }) {
+                    Icon(
+                        imageVector =
+                            if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (uiState.isPlaying) "暂停" else "播放"
+                    )
+                }
+            }
         },
         bottomBar = {
             NavigationBar {

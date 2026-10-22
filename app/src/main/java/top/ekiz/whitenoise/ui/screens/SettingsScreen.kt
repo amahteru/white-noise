@@ -3,6 +3,7 @@ package top.ekiz.whitenoise.ui.screens
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -14,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import java.util.Calendar
 import kotlin.math.roundToInt
@@ -68,7 +70,8 @@ fun SettingsScreen(
             contentDescription = "音量大小",
             value = volume,
             onValueChange = onVolumeChanged,
-            valueRange = 0f..1f
+            valueRange = 0f..1f,
+            steps = 0
         )
 
         SliderSettingRow(
@@ -247,16 +250,17 @@ fun SettingsScreen(
         )
 
         ListItem(
+            modifier =
+                Modifier.toggleable(
+                    value = isSpatialAudioEnabled,
+                    role = Role.Switch,
+                    onValueChange = onSpatialAudioEnabledChanged
+                ),
             headlineContent = { Text("3D 空间音频 (双耳渲染)") },
             leadingContent = {
-                Icon(imageVector = Icons.Filled.SurroundSound, contentDescription = "空间音频")
+                Icon(imageVector = Icons.Filled.SurroundSound, contentDescription = null)
             },
-            trailingContent = {
-                Switch(
-                    checked = isSpatialAudioEnabled,
-                    onCheckedChange = onSpatialAudioEnabledChanged
-                )
-            }
+            trailingContent = { Switch(checked = isSpatialAudioEnabled, onCheckedChange = null) }
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium))

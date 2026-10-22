@@ -20,7 +20,7 @@ fun SliderSettingRow(
 ) {
     ListItem(
         headlineContent = { Text(contentDescription) },
-        leadingContent = { Icon(imageVector = icon, contentDescription = contentDescription) },
+        leadingContent = { Icon(imageVector = icon, contentDescription = null) },
         supportingContent = {
             Column(modifier = Modifier.padding(top = MaterialTheme.spacing.small)) {
                 Slider(
