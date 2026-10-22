@@ -6,19 +6,20 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SurroundSound
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import java.util.Calendar
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import top.ekiz.whitenoise.ui.components.SliderSettingRow
-import top.ekiz.whitenoise.ui.theme.spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,59 +46,39 @@ fun SettingsScreen(
         modifier =
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(innerPadding)
     ) {
-        Text(
-            text = "音频控制",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier =
-                Modifier.padding(
-                    start = MaterialTheme.spacing.medium,
-                    top = MaterialTheme.spacing.large,
-                    bottom = MaterialTheme.spacing.small
-                )
-        )
-
         SliderSettingRow(
             icon = Icons.AutoMirrored.Filled.VolumeUp,
-            contentDescription = "音量大小",
+            title = "音量大小: ${(volume * 100).roundToInt()}%",
             value = volume,
             onValueChange = onVolumeChanged,
             valueRange = 0f..1f
         )
 
+        val balancePercent = (abs(balance) * 100).roundToInt()
         SliderSettingRow(
             icon = Icons.Filled.Tune,
-            contentDescription = "左右耳平衡",
+            title =
+                when {
+                    balancePercent == 0 -> "左右耳平衡: 居中"
+                    balance < 0f -> "左右耳平衡: 偏左 $balancePercent%"
+                    else -> "左右耳平衡: 偏右 $balancePercent%"
+                },
             value = balance,
             onValueChange = onBalanceChanged,
             valueRange = -1f..1f,
-            labels = listOf("偏左", "居中", "偏右"),
             steps = 9
         )
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium))
-
-        Text(
-            text = "定时关闭",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier =
-                Modifier.padding(
-                    start = MaterialTheme.spacing.medium,
-                    top = MaterialTheme.spacing.small,
-                    bottom = MaterialTheme.spacing.small
-                )
-        )
+        HorizontalDivider()
 
         var showTimePicker by remember { mutableStateOf(false) }
 
         SliderSettingRow(
-            icon = Icons.Filled.Schedule,
-            contentDescription = "倒计时长: $sleepTimer 分钟",
+            icon = Icons.Filled.Timer,
+            title = "倒计时长: $sleepTimer 分钟",
             value = sleepTimer.coerceAtMost(120).toFloat(),
             onValueChange = { onSleepTimerChanged(it.roundToInt()) },
             valueRange = 0f..120f,
-            labels = listOf("0", "60", "120"),
             steps = 11
         )
 
@@ -112,14 +93,7 @@ fun SettingsScreen(
 
         ListItem(
             headlineContent = { Text("指定时间关闭") },
-            supportingContent = {
-                Text(
-                    "将在 %02d:%02d 自动关闭".format(
-                        targetHour,
-                        targetMinute
-                    )
-                )
-            },
+            supportingContent = { Text("将在 %02d:%02d 自动关闭".format(targetHour, targetMinute)) },
             leadingContent = { Icon(Icons.Filled.Schedule, contentDescription = null) },
             trailingContent = {
                 OutlinedButton(onClick = { showTimePicker = true }) { Text("设定时间") }
@@ -184,80 +158,58 @@ fun SettingsScreen(
             }
         }
 
-        Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
-            val isPaused = !isTimerRunning && remainingTimeMillis > 0L
+        val isPaused = !isTimerRunning && remainingTimeMillis > 0L
 
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.medium),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
-            ) {
-                if (isTimerRunning) {
-                    OutlinedButton(onClick = onPauseTimer, modifier = Modifier.weight(1f)) {
-                        Text("暂停")
-                    }
-                } else {
-                    Button(
-                        onClick = onStartTimer,
-                        enabled = sleepTimer > 0 || isPaused,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(if (isPaused) "继续" else "开始")
-                    }
-                    if (isPaused) {
-                        OutlinedButton(onClick = onCancelTimer, modifier = Modifier.weight(1f)) {
-                            Text("取消")
-                        }
-                    }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (isTimerRunning) {
+                OutlinedButton(onClick = onPauseTimer, modifier = Modifier.weight(1f)) {
+                    Text("暂停")
                 }
-            }
-
-            if (isTimerRunning || remainingTimeMillis > 0L) {
-                val totalForProgress =
-                    if (totalTimeMillis > 0L) totalTimeMillis else remainingTimeMillis
-                val progress =
-                    if (totalForProgress > 0)
-                        (remainingTimeMillis.toFloat() / totalForProgress.toFloat()).coerceIn(
-                            0f,
-                            1f
-                        )
-                    else 0f
-                val remainingMinutes = remainingTimeMillis / 60000
-                val remainingSeconds = (remainingTimeMillis % 60000) / 1000
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+            } else {
+                Button(
+                    onClick = onStartTimer,
+                    enabled = sleepTimer > 0 || isPaused,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        "剩余时间: ${"%02d:%02d".format(remainingMinutes, remainingSeconds)}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Text(if (isPaused) "继续" else "开始")
                 }
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.small),
-                    strokeCap = StrokeCap.Round
-                )
+                if (isPaused) {
+                    OutlinedButton(onClick = onCancelTimer, modifier = Modifier.weight(1f)) {
+                        Text("取消")
+                    }
+                }
             }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium))
+        if (isTimerRunning || remainingTimeMillis > 0L) {
+            val totalForProgress =
+                if (totalTimeMillis > 0L) totalTimeMillis else remainingTimeMillis
+            val progress =
+                if (totalForProgress > 0) {
+                    (remainingTimeMillis.toFloat() / totalForProgress.toFloat()).coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
+            val remainingMinutes = remainingTimeMillis / 60000
+            val remainingSeconds = (remainingTimeMillis % 60000) / 1000
+            ListItem(
+                headlineContent = {
+                    Text("剩余时间: %02d:%02d".format(remainingMinutes, remainingSeconds))
+                },
+                trailingContent = { Text("${(progress * 100).toInt()}%") },
+                supportingContent = {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            )
+        }
 
-        Text(
-            text = "高级功能",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier =
-                Modifier.padding(
-                    start = MaterialTheme.spacing.medium,
-                    top = MaterialTheme.spacing.small,
-                    bottom = MaterialTheme.spacing.small
-                )
-        )
+        HorizontalDivider()
 
         ListItem(
             modifier =
@@ -267,43 +219,33 @@ fun SettingsScreen(
                     onValueChange = onSpatialAudioEnabledChanged
                 ),
             headlineContent = { Text("3D 空间音频 (双耳渲染)") },
-            leadingContent = { Icon(imageVector = Icons.Filled.SurroundSound, contentDescription = null) },
+            leadingContent = { Icon(Icons.Filled.SurroundSound, contentDescription = null) },
             trailingContent = { Switch(checked = isSpatialAudioEnabled, onCheckedChange = null) }
         )
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium))
+        HorizontalDivider()
 
-        Text(
-            text = "外观与显示",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier =
-                Modifier.padding(
-                    start = MaterialTheme.spacing.medium,
-                    top = MaterialTheme.spacing.small,
-                    bottom = MaterialTheme.spacing.medium
-                )
-        )
-
-        Box(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium),
-            contentAlignment = Alignment.Center
-        ) {
-            val options = listOf("System" to "跟随系统", "Light" to "浅色", "Dark" to "深色")
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                options.forEachIndexed { index, (mode, label) ->
-                    SegmentedButton(
-                        selected = themeMode == mode,
-                        onClick = { onThemeModeChanged(mode) },
-                        shape =
-                            SegmentedButtonDefaults.itemShape(index = index, count = options.size)
-                    ) {
-                        Text(label)
+        ListItem(
+            headlineContent = { Text("主题") },
+            leadingContent = { Icon(Icons.Filled.DarkMode, contentDescription = null) },
+            supportingContent = {
+                val options = listOf("System" to "跟随系统", "Light" to "浅色", "Dark" to "深色")
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    options.forEachIndexed { index, (mode, label) ->
+                        SegmentedButton(
+                            selected = themeMode == mode,
+                            onClick = { onThemeModeChanged(mode) },
+                            shape =
+                                SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = options.size
+                                )
+                        ) {
+                            Text(label)
+                        }
                     }
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraLarge))
+        )
     }
 }

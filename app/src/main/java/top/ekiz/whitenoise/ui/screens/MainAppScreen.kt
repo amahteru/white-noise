@@ -99,18 +99,13 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
         },
         floatingActionButton = {
             if (selectedTab == 0 || selectedTab == 1) {
-                ExtendedFloatingActionButton(
-                    onClick = { onPlayPauseClicked() },
-                    icon = {
-                        Icon(
-                            imageVector =
-                                if (uiState.isPlaying) Icons.Filled.Pause
-                                else Icons.Filled.PlayArrow,
-                            contentDescription = null
-                        )
-                    },
-                    text = { Text(if (uiState.isPlaying) "暂停" else "播放") }
-                )
+                FloatingActionButton(onClick = { onPlayPauseClicked() }) {
+                    Icon(
+                        imageVector =
+                            if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (uiState.isPlaying) "暂停" else "播放"
+                    )
+                }
             }
         },
         bottomBar = {
