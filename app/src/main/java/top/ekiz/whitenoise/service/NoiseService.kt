@@ -256,13 +256,9 @@ class NoiseService : MediaSessionService() {
                 timerManager.timerEvents.collect { event ->
                     when (event) {
                         TimerEvent.START_FADE_OUT -> {
-                            val durationMs = timerManager.activeRemainingMillis.value
-                            if (durationMs > 0 && player.isPlaying) {
+                            if (player.isPlaying) {
                                 fadeJob?.cancel()
-                                fadeJob =
-                                    serviceScope.launch {
-                                        animatePlayerVolume(player.volume, 0f, durationMs)
-                                    }
+                                fadeJob = serviceScope.launch { followTimerVolume(0L) }
                             }
                         }
                         TimerEvent.TIMER_FINISHED -> {
@@ -273,10 +269,7 @@ class NoiseService : MediaSessionService() {
                         TimerEvent.TIMER_CANCELLED -> {
                             if (player.isPlaying && !isPausedByCall) {
                                 fadeJob?.cancel()
-                                fadeJob =
-                                    serviceScope.launch {
-                                        animatePlayerVolume(player.volume, 1f, 1000L)
-                                    }
+                                fadeJob = serviceScope.launch { followTimerVolume(1000L) }
                             }
                         }
                     }
@@ -357,8 +350,37 @@ class NoiseService : MediaSessionService() {
                 player.play()
                 isPausedByCall = false
 
-                animatePlayerVolume(0f, 1f, 200L)
+                player.volume = 0f
+                followTimerVolume(200L)
             }
+    }
+
+    /**
+     * Where the sleep timer wants the volume now: full, or partway down its fade-out. The fade
+     * spans the last [TimerManager.FADE_OUT_MILLIS], or the whole timer if it is shorter.
+     */
+    private fun timerVolume(): Float {
+        if (!timerManager.isTimerRunning.value) return 1f
+        return (timerManager.activeRemainingMillis.value.toFloat() / fadeWindowMillis())
+            .coerceIn(0f, 1f)
+    }
+
+    private fun fadeWindowMillis(): Long =
+        timerManager.totalTimerMillis.value
+            .takeIf { it > 0L }
+            ?.coerceAtMost(TimerManager.FADE_OUT_MILLIS) ?: TimerManager.FADE_OUT_MILLIS
+
+    /**
+     * Ramps to [timerVolume] over [rampMs], then keeps fading out if the timer is in its fade
+     * window. Every resume goes through here, so pausing, a call, or starting playback late
+     * never loses the fade-out.
+     */
+    private suspend fun followTimerVolume(rampMs: Long) {
+        animatePlayerVolume(player.volume, timerVolume(), rampMs)
+        val remaining = timerManager.activeRemainingMillis.value
+        if (timerManager.isTimerRunning.value && remaining in 1L..fadeWindowMillis()) {
+            animatePlayerVolume(player.volume, 0f, remaining)
+        }
     }
 
     private suspend fun animatePlayerVolume(from: Float, to: Float, durationMs: Long) {

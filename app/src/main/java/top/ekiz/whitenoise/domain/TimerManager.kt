@@ -24,6 +24,11 @@ enum class TimerEvent {
 
 @Singleton
 class TimerManager @Inject constructor(private val settingsDataStore: SettingsDataStore) {
+    companion object {
+        /** Playback fades out over this last stretch of the timer. */
+        const val FADE_OUT_MILLIS = 60_000L
+    }
+
     private val _activeRemainingMillis = MutableStateFlow(0L)
     val activeRemainingMillis = _activeRemainingMillis.asStateFlow()
 
@@ -84,6 +89,8 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
             settingsDataStore.saveTimerState(endTime = endTime, remaining = 0L, totalMillis = newTotal)
 
             startTicker(durationMs, endTime)
+            // A restart can land mid fade-out; let the player recompute its volume.
+            _timerEvents.tryEmit(TimerEvent.TIMER_CANCELLED)
         }
     }
 
@@ -146,14 +153,17 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
                 while (true) {
                     val remaining = endTime - System.currentTimeMillis()
 
-                    if (remaining <= 60000L && !fadeTriggered) {
+                    // Publish the remaining time first: the fade-out handler reads it.
+                    if (remaining > 0) {
+                        _activeRemainingMillis.value = remaining
+                    }
+
+                    if (remaining <= FADE_OUT_MILLIS && !fadeTriggered) {
                         fadeTriggered = true
                         _timerEvents.tryEmit(TimerEvent.START_FADE_OUT)
                     }
 
-                    if (remaining > 0) {
-                        _activeRemainingMillis.value = remaining
-                    } else {
+                    if (remaining <= 0) {
                         clearTimer()
                         _timerEvents.tryEmit(TimerEvent.TIMER_FINISHED)
                         break

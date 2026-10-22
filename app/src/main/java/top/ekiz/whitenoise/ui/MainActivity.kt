@@ -2,6 +2,7 @@ package top.ekiz.whitenoise.ui
 
 import android.content.ComponentName
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -34,7 +35,13 @@ class MainActivity : ComponentActivity() {
         controllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
         controllerFuture?.addListener(
             {
-                val mediaController = controllerFuture?.get()
+                val mediaController =
+                    try {
+                        controllerFuture?.get()
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Failed to connect to MediaController", e)
+                        return@addListener
+                    }
                 viewModel.setMediaController(mediaController)
                 mediaController?.addListener(
                     object : androidx.media3.common.Player.Listener {
