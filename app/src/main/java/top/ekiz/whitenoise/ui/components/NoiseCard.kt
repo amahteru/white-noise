@@ -1,26 +1,25 @@
 package top.ekiz.whitenoise.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 
 @Composable
 fun NoiseCard(
     name: String,
-    icon: ImageVector,
-    iconTint: androidx.compose.ui.graphics.Color? = null,
+    leadingContent: @Composable () -> Unit,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
     ListItem(
         modifier =
-            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClick = onClick),
+            Modifier.fillMaxWidth()
+                .clip(MaterialTheme.shapes.large)
+                .selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick),
         colors =
             ListItemDefaults.colors(
                 containerColor =
@@ -28,27 +27,13 @@ fun NoiseCard(
                     else MaterialTheme.colorScheme.surface,
                 headlineColor =
                     if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
-                    else MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurface,
+                leadingIconColor =
+                    if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant
             ),
         headlineContent = { Text(text = name) },
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint =
-                    iconTint
-                        ?: if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        trailingContent = {
-            if (isSelected) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = "已选择",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
+        leadingContent = leadingContent,
+        trailingContent = { RadioButton(selected = isSelected, onClick = null) }
     )
 }

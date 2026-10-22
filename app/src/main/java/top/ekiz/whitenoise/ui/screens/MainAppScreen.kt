@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import top.ekiz.whitenoise.domain.NoiseType
 import top.ekiz.whitenoise.ui.NoiseUiState
@@ -49,6 +51,7 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
     }
 
     var selectedTab by remember { mutableIntStateOf(0) }
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     val colorNoises =
         listOf(
@@ -79,6 +82,7 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
         )
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
                 title = {
@@ -90,19 +94,24 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
                         }
                     )
                 },
-                actions = {
-                    if (selectedTab == 0 || selectedTab == 1) {
-                        IconButton(onClick = { onPlayPauseClicked() }) {
-                            Icon(
-                                imageVector =
-                                    if (uiState.isPlaying) Icons.Filled.Pause
-                                    else Icons.Filled.PlayArrow,
-                                contentDescription = if (uiState.isPlaying) "暂停" else "播放"
-                            )
-                        }
-                    }
-                }
+                scrollBehavior = scrollBehavior
             )
+        },
+        floatingActionButton = {
+            if (selectedTab == 0 || selectedTab == 1) {
+                ExtendedFloatingActionButton(
+                    onClick = { onPlayPauseClicked() },
+                    icon = {
+                        Icon(
+                            imageVector =
+                                if (uiState.isPlaying) Icons.Filled.Pause
+                                else Icons.Filled.PlayArrow,
+                            contentDescription = null
+                        )
+                    },
+                    text = { Text(if (uiState.isPlaying) "暂停" else "播放") }
+                )
+            }
         },
         bottomBar = {
             NavigationBar {

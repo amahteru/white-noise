@@ -16,11 +16,11 @@ fun SliderSettingRow(
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
     labels: List<String>? = null,
-    steps: Int = 9
+    steps: Int = 0
 ) {
     ListItem(
         headlineContent = { Text(contentDescription) },
-        leadingContent = { Icon(imageVector = icon, contentDescription = contentDescription) },
+        leadingContent = { Icon(imageVector = icon, contentDescription = null) },
         supportingContent = {
             Column(modifier = Modifier.padding(top = MaterialTheme.spacing.small)) {
                 Slider(

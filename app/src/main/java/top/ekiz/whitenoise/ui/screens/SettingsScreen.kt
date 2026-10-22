@@ -2,6 +2,7 @@ package top.ekiz.whitenoise.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -13,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.Role
 import java.util.Calendar
 import kotlin.math.roundToInt
 import top.ekiz.whitenoise.ui.components.SliderSettingRow
@@ -41,12 +43,7 @@ fun SettingsScreen(
 ) {
     Column(
         modifier =
-            Modifier.fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = innerPadding.calculateBottomPadding()
-                )
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(innerPadding)
     ) {
         Text(
             text = "音频控制",
@@ -74,7 +71,8 @@ fun SettingsScreen(
             value = balance,
             onValueChange = onBalanceChanged,
             valueRange = -1f..1f,
-            labels = listOf("偏左", "居中", "偏右")
+            labels = listOf("偏左", "居中", "偏右"),
+            steps = 9
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium))
@@ -135,8 +133,23 @@ fun SettingsScreen(
                     initialMinute = targetMinute,
                     is24Hour = true
                 )
-            AlertDialog(
+            var displayMode by remember { mutableStateOf(TimePickerDisplayMode.Picker) }
+            TimePickerDialog(
                 onDismissRequest = { showTimePicker = false },
+                title = { TimePickerDialogDefaults.Title(displayMode = displayMode) },
+                modeToggleButton = {
+                    TimePickerDialogDefaults.DisplayModeToggle(
+                        onDisplayModeChange = {
+                            displayMode =
+                                if (displayMode == TimePickerDisplayMode.Picker) {
+                                    TimePickerDisplayMode.Input
+                                } else {
+                                    TimePickerDisplayMode.Picker
+                                }
+                        },
+                        displayMode = displayMode
+                    )
+                },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -161,9 +174,14 @@ fun SettingsScreen(
                         Text("确定")
                     }
                 },
-                dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("取消") } },
-                text = { TimePicker(state = timePickerState) }
-            )
+                dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("取消") } }
+            ) {
+                if (displayMode == TimePickerDisplayMode.Picker) {
+                    TimePicker(state = timePickerState)
+                } else {
+                    TimeInput(state = timePickerState)
+                }
+            }
         }
 
         Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
@@ -173,24 +191,22 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.medium),
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
             ) {
-                Button(
-                    onClick = onStartTimer,
-                    enabled = !isTimerRunning && (sleepTimer > 0 || remainingTimeMillis > 0L),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(if (isPaused) "继续" else "开始")
-                }
                 if (isTimerRunning) {
                     OutlinedButton(onClick = onPauseTimer, modifier = Modifier.weight(1f)) {
                         Text("暂停")
                     }
-                } else if (isPaused) {
-                    OutlinedButton(onClick = onCancelTimer, modifier = Modifier.weight(1f)) {
-                        Text("取消")
-                    }
                 } else {
-                    OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.weight(1f)) {
-                        Text("暂停")
+                    Button(
+                        onClick = onStartTimer,
+                        enabled = sleepTimer > 0 || isPaused,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (isPaused) "继续" else "开始")
+                    }
+                    if (isPaused) {
+                        OutlinedButton(onClick = onCancelTimer, modifier = Modifier.weight(1f)) {
+                            Text("取消")
+                        }
                     }
                 }
             }
@@ -244,16 +260,15 @@ fun SettingsScreen(
         )
 
         ListItem(
+            modifier =
+                Modifier.toggleable(
+                    value = isSpatialAudioEnabled,
+                    role = Role.Switch,
+                    onValueChange = onSpatialAudioEnabledChanged
+                ),
             headlineContent = { Text("3D 空间音频 (双耳渲染)") },
-            leadingContent = {
-                Icon(imageVector = Icons.Filled.SurroundSound, contentDescription = "空间音频")
-            },
-            trailingContent = {
-                Switch(
-                    checked = isSpatialAudioEnabled,
-                    onCheckedChange = onSpatialAudioEnabledChanged
-                )
-            }
+            leadingContent = { Icon(imageVector = Icons.Filled.SurroundSound, contentDescription = null) },
+            trailingContent = { Switch(checked = isSpatialAudioEnabled, onCheckedChange = null) }
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium))
