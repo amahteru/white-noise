@@ -29,6 +29,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import top.ekiz.whitenoise.audio.NoiseAudioProcessor
@@ -273,6 +274,26 @@ class NoiseService : MediaSessionService() {
                     }
                 }
             }
+
+            launch {
+                settingsDataStore.dailyStopFlow.collectLatest { schedule ->
+                    var handledStopAt = 0L
+                    while (true) {
+                        val now = System.currentTimeMillis()
+                        val stopAt = schedule.nextStopAt(now) ?: break
+                        val untilStop = stopAt - now
+                        if (
+                            untilStop <= TimerManager.FADE_OUT_MILLIS &&
+                                stopAt != handledStopAt &&
+                                player.isPlaying
+                        ) {
+                            handledStopAt = stopAt
+                            stopAtScheduledTime(untilStop)
+                        }
+                        delay((untilStop - TimerManager.FADE_OUT_MILLIS).coerceIn(1_000L, 15_000L))
+                    }
+                }
+            }
         }
 
         startCallMonitor()
@@ -335,6 +356,15 @@ class NoiseService : MediaSessionService() {
                 isPausedByCall = false
                 followTimerVolume(1000L)
             }
+    }
+
+    private fun stopAtScheduledTime(untilStop: Long) {
+        val timerEndsFirst =
+            timerManager.isTimerRunning.value &&
+                timerManager.activeRemainingMillis.value <= untilStop
+        if (!timerEndsFirst) {
+            timerManager.startTimer(untilStop)
+        }
     }
 
     private fun timerVolume(): Float {

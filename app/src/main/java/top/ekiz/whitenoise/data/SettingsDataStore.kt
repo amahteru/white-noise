@@ -11,11 +11,13 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.DayOfWeek
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import top.ekiz.whitenoise.domain.DailyStopSchedule
 import top.ekiz.whitenoise.domain.NoiseType
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -33,6 +35,9 @@ class SettingsDataStore @Inject constructor(@ApplicationContext private val cont
         val BALANCE_KEY = floatPreferencesKey("balance")
         val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         val SPATIAL_AUDIO_KEY = booleanPreferencesKey("spatial_audio")
+        val DAILY_STOP_ENABLED_KEY = booleanPreferencesKey("daily_stop_enabled")
+        val DAILY_STOP_MINUTE_KEY = intPreferencesKey("daily_stop_minute")
+        val DAILY_STOP_DAYS_KEY = intPreferencesKey("daily_stop_days")
     }
 
     private fun <T> flowOf(key: Preferences.Key<T>, default: T): Flow<T> =
@@ -56,6 +61,21 @@ class SettingsDataStore @Inject constructor(@ApplicationContext private val cont
     val themeModeFlow: Flow<String> = flowOf(THEME_MODE_KEY, "System")
     val spatialAudioFlow: Flow<Boolean> = flowOf(SPATIAL_AUDIO_KEY, false)
 
+    val dailyStopFlow: Flow<DailyStopSchedule> =
+        context.dataStore.data
+            .map { prefs ->
+                val default = DailyStopSchedule()
+                DailyStopSchedule(
+                    enabled = prefs[DAILY_STOP_ENABLED_KEY] ?: default.enabled,
+                    minuteOfDay = prefs[DAILY_STOP_MINUTE_KEY] ?: default.minuteOfDay,
+                    days =
+                        prefs[DAILY_STOP_DAYS_KEY]?.let { mask ->
+                            DayOfWeek.entries.filter { mask and (1 shl it.ordinal) != 0 }.toSet()
+                        } ?: default.days
+                )
+            }
+            .distinctUntilChanged()
+
     suspend fun saveVolume(volume: Float) = save(VOLUME_KEY, volume)
 
     suspend fun saveNoiseType(noiseType: NoiseType) = save(NOISE_TYPE_KEY, noiseType.name)
@@ -67,6 +87,15 @@ class SettingsDataStore @Inject constructor(@ApplicationContext private val cont
     suspend fun saveThemeMode(mode: String) = save(THEME_MODE_KEY, mode)
 
     suspend fun saveSpatialAudio(enabled: Boolean) = save(SPATIAL_AUDIO_KEY, enabled)
+
+    suspend fun saveDailyStop(schedule: DailyStopSchedule) {
+        context.dataStore.edit {
+            it[DAILY_STOP_ENABLED_KEY] = schedule.enabled
+            it[DAILY_STOP_MINUTE_KEY] = schedule.minuteOfDay
+            it[DAILY_STOP_DAYS_KEY] =
+                schedule.days.fold(0) { mask, day -> mask or (1 shl day.ordinal) }
+        }
+    }
 
     suspend fun saveTimerState(endTime: Long, remaining: Long, totalMillis: Long? = null) {
         context.dataStore.edit {

@@ -13,9 +13,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
+import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Calendar
 import kotlin.math.roundToInt
 import top.ekiz.whitenoise.R
+import top.ekiz.whitenoise.domain.DailyStopSchedule
 import top.ekiz.whitenoise.ui.components.SliderSettingRow
 import top.ekiz.whitenoise.ui.theme.WhiteNoiseTheme
 import top.ekiz.whitenoise.ui.theme.spacing
@@ -41,7 +46,9 @@ fun SettingsScreen(
     themeMode: String,
     onThemeModeChanged: (String) -> Unit,
     isSpatialAudioEnabled: Boolean,
-    onSpatialAudioEnabledChanged: (Boolean) -> Unit
+    onSpatialAudioEnabledChanged: (Boolean) -> Unit,
+    dailyStop: DailyStopSchedule,
+    onDailyStopChanged: (DailyStopSchedule) -> Unit
 ) {
     Column(
         modifier =
@@ -150,59 +157,29 @@ fun SettingsScreen(
         )
 
         if (showTimePicker) {
-            val timePickerState =
-                rememberTimePickerState(
-                    initialHour = targetHour,
-                    initialMinute = targetMinute,
-                    is24Hour = true
-                )
-            var displayMode by remember { mutableStateOf(TimePickerDisplayMode.Picker) }
-            TimePickerDialog(
-                onDismissRequest = { showTimePicker = false },
-                title = { TimePickerDialogDefaults.Title(displayMode = displayMode) },
-                modeToggleButton = {
-                    TimePickerDialogDefaults.DisplayModeToggle(
-                        onDisplayModeChange = {
-                            displayMode =
-                                if (displayMode == TimePickerDisplayMode.Picker)
-                                    TimePickerDisplayMode.Input
-                                else TimePickerDisplayMode.Picker
-                        },
-                        displayMode = displayMode
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            val now = Calendar.getInstance()
-                            val selected =
-                                Calendar.getInstance().apply {
-                                    set(Calendar.HOUR_OF_DAY, timePickerState.hour)
-                                    set(Calendar.MINUTE, timePickerState.minute)
-                                    set(Calendar.SECOND, 0)
-                                }
-                            if (selected.before(now)) {
-                                selected.add(Calendar.DAY_OF_YEAR, 1)
-                            }
-                            val diffMinutes =
-                                ((selected.timeInMillis - now.timeInMillis) / 60000L)
-                                    .toInt()
-                                    .coerceAtLeast(1)
-                            onSleepTimerChanged(diffMinutes)
-                            showTimePicker = false
+            ClockTimePickerDialog(
+                initialHour = targetHour,
+                initialMinute = targetMinute,
+                onDismiss = { showTimePicker = false },
+                onConfirm = { hour, minute ->
+                    val now = Calendar.getInstance()
+                    val selected =
+                        Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, hour)
+                            set(Calendar.MINUTE, minute)
+                            set(Calendar.SECOND, 0)
                         }
-                    ) {
-                        Text("确定")
+                    if (selected.before(now)) {
+                        selected.add(Calendar.DAY_OF_YEAR, 1)
                     }
-                },
-                dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("取消") } }
-            ) {
-                if (displayMode == TimePickerDisplayMode.Picker) {
-                    TimePicker(state = timePickerState)
-                } else {
-                    TimeInput(state = timePickerState)
+                    val diffMinutes =
+                        ((selected.timeInMillis - now.timeInMillis) / 60000L)
+                            .toInt()
+                            .coerceAtLeast(1)
+                    onSleepTimerChanged(diffMinutes)
+                    showTimePicker = false
                 }
-            }
+            )
         }
 
         Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
@@ -271,6 +248,83 @@ fun SettingsScreen(
         HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium))
 
         Text(
+            text = "每日定时关闭",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier =
+                Modifier.padding(
+                    start = MaterialTheme.spacing.medium,
+                    top = MaterialTheme.spacing.small,
+                    bottom = MaterialTheme.spacing.small
+                )
+        )
+
+        ListItem(
+            modifier =
+                Modifier.toggleable(
+                    value = dailyStop.enabled,
+                    role = Role.Switch,
+                    onValueChange = { onDailyStopChanged(dailyStop.copy(enabled = it)) }
+                ),
+            headlineContent = { Text("启用每日定时关闭") },
+            supportingContent = { Text(dailyStopSummary(dailyStop)) },
+            leadingContent = { Icon(painterResource(R.drawable.ic_alarm), contentDescription = null) },
+            trailingContent = { Switch(checked = dailyStop.enabled, onCheckedChange = null) }
+        )
+
+        var showDailyStopPicker by remember { mutableStateOf(false) }
+        ListItem(
+            headlineContent = { Text("关闭时间") },
+            supportingContent = { Text("%02d:%02d".format(dailyStop.hour, dailyStop.minute)) },
+            leadingContent = { Icon(painterResource(R.drawable.ic_schedule), contentDescription = null) },
+            trailingContent = {
+                OutlinedButton(onClick = { showDailyStopPicker = true }) { Text("设定时间") }
+            }
+        )
+
+        if (showDailyStopPicker) {
+            ClockTimePickerDialog(
+                initialHour = dailyStop.hour,
+                initialMinute = dailyStop.minute,
+                onDismiss = { showDailyStopPicker = false },
+                onConfirm = { hour, minute ->
+                    onDailyStopChanged(dailyStop.copy(minuteOfDay = hour * 60 + minute))
+                    showDailyStopPicker = false
+                }
+            )
+        }
+
+        MultiChoiceSegmentedButtonRow(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(
+                        start = MaterialTheme.spacing.medium,
+                        end = MaterialTheme.spacing.medium,
+                        top = MaterialTheme.spacing.small
+                    )
+        ) {
+            DayOfWeek.entries.forEachIndexed { index, day ->
+                SegmentedButton(
+                    checked = day in dailyStop.days,
+                    onCheckedChange = { checked ->
+                        val days = if (checked) dailyStop.days + day else dailyStop.days - day
+                        onDailyStopChanged(dailyStop.copy(days = days))
+                    },
+                    shape =
+                        SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = DayOfWeek.entries.size
+                        ),
+                    icon = {}
+                ) {
+                    Text(dayLabels[index])
+                }
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium))
+
+        Text(
             text = "高级功能",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
@@ -333,11 +387,72 @@ fun SettingsScreen(
     }
 }
 
-@Preview(name = "Light", showBackground = true, heightDp = 1100)
+private val dayLabels = listOf("一", "二", "三", "四", "五", "六", "日")
+
+private fun dailyStopSummary(schedule: DailyStopSchedule): String {
+    if (!schedule.enabled) return "到点自动停止播放，无需每天设置"
+    val nextStopAt =
+        schedule.nextStopAt(System.currentTimeMillis()) ?: return "请至少选择一天"
+    val nextDate = Instant.ofEpochMilli(nextStopAt).atZone(ZoneId.systemDefault()).toLocalDate()
+    val today = LocalDate.now()
+    val dayText =
+        when (nextDate) {
+            today -> "今天"
+            today.plusDays(1) -> "明天"
+            else -> "周" + dayLabels[nextDate.dayOfWeek.ordinal]
+        }
+    return "下次：$dayText %02d:%02d 停止播放".format(schedule.hour, schedule.minute)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ClockTimePickerDialog(
+    initialHour: Int,
+    initialMinute: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (hour: Int, minute: Int) -> Unit
+) {
+    val timePickerState =
+        rememberTimePickerState(
+            initialHour = initialHour,
+            initialMinute = initialMinute,
+            is24Hour = true
+        )
+    var displayMode by remember { mutableStateOf(TimePickerDisplayMode.Picker) }
+    TimePickerDialog(
+        onDismissRequest = onDismiss,
+        title = { TimePickerDialogDefaults.Title(displayMode = displayMode) },
+        modeToggleButton = {
+            TimePickerDialogDefaults.DisplayModeToggle(
+                onDisplayModeChange = {
+                    displayMode =
+                        if (displayMode == TimePickerDisplayMode.Picker)
+                            TimePickerDisplayMode.Input
+                        else TimePickerDisplayMode.Picker
+                },
+                displayMode = displayMode
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(timePickerState.hour, timePickerState.minute) }) {
+                Text("确定")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+    ) {
+        if (displayMode == TimePickerDisplayMode.Picker) {
+            TimePicker(state = timePickerState)
+        } else {
+            TimeInput(state = timePickerState)
+        }
+    }
+}
+
+@Preview(name = "Light", showBackground = true, heightDp = 1400)
 @Preview(
     name = "Dark",
     showBackground = true,
-    heightDp = 1100,
+    heightDp = 1400,
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
@@ -363,7 +478,9 @@ private fun SettingsScreenPreview() {
                 themeMode = "System",
                 onThemeModeChanged = {},
                 isSpatialAudioEnabled = true,
-                onSpatialAudioEnabledChanged = {}
+                onSpatialAudioEnabledChanged = {},
+                dailyStop = DailyStopSchedule(enabled = true),
+                onDailyStopChanged = {}
             )
         }
     }

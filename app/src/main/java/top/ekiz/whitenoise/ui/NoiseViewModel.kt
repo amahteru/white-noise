@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import top.ekiz.whitenoise.data.SettingsDataStore
+import top.ekiz.whitenoise.domain.DailyStopSchedule
 import top.ekiz.whitenoise.domain.NoiseType
 import top.ekiz.whitenoise.domain.TimerManager
 import top.ekiz.whitenoise.service.NoiseService
@@ -25,6 +26,7 @@ data class NoiseUiState(
     val sleepTimerMinutes: Int = 0,
     val themeMode: String = "System",
     val isSpatialAudioEnabled: Boolean = false,
+    val dailyStop: DailyStopSchedule = DailyStopSchedule(),
     val isPlaying: Boolean = false,
     val activeRemainingMillis: Long = 0L,
     val totalTimerMillis: Long = 0L,
@@ -49,7 +51,8 @@ constructor(private val dataStore: SettingsDataStore, private val timerManager: 
             dataStore.noiseTypeFlow,
             dataStore.sleepTimerFlow,
             dataStore.themeModeFlow,
-            dataStore.spatialAudioFlow
+            dataStore.spatialAudioFlow,
+            dataStore.dailyStopFlow
         ) { values ->
             NoiseUiState(
                 volume = values[0] as Float,
@@ -57,7 +60,8 @@ constructor(private val dataStore: SettingsDataStore, private val timerManager: 
                 noiseType = values[2] as NoiseType,
                 sleepTimerMinutes = values[3] as Int,
                 themeMode = values[4] as String,
-                isSpatialAudioEnabled = values[5] as Boolean
+                isSpatialAudioEnabled = values[5] as Boolean,
+                dailyStop = values[6] as DailyStopSchedule
             )
         }
 
@@ -143,6 +147,10 @@ constructor(private val dataStore: SettingsDataStore, private val timerManager: 
 
     fun setSpatialAudioEnabled(enabled: Boolean) {
         viewModelScope.launch { dataStore.saveSpatialAudio(enabled) }
+    }
+
+    fun setDailyStop(schedule: DailyStopSchedule) {
+        viewModelScope.launch { dataStore.saveDailyStop(schedule) }
     }
 
     fun startTimer() {

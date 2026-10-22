@@ -151,7 +151,9 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
                 themeMode = uiState.themeMode,
                 onThemeModeChanged = { viewModel.setThemeMode(it) },
                 isSpatialAudioEnabled = uiState.isSpatialAudioEnabled,
-                onSpatialAudioEnabledChanged = { viewModel.setSpatialAudioEnabled(it) }
+                onSpatialAudioEnabledChanged = { viewModel.setSpatialAudioEnabled(it) },
+                dailyStop = uiState.dailyStop,
+                onDailyStopChanged = { viewModel.setDailyStop(it) }
             )
         }
     }
