@@ -27,7 +27,6 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: NoiseViewModel by viewModels()
     private var controllerFuture: ListenableFuture<MediaController>? = null
-    var mediaController: MediaController? = null
 
     override fun onStart() {
         super.onStart()
@@ -35,7 +34,7 @@ class MainActivity : ComponentActivity() {
         controllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
         controllerFuture?.addListener(
             {
-                mediaController = controllerFuture?.get()
+                val mediaController = controllerFuture?.get()
                 viewModel.setMediaController(mediaController)
                 mediaController?.addListener(
                     object : androidx.media3.common.Player.Listener {

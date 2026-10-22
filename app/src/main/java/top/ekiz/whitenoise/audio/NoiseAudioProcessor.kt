@@ -132,7 +132,7 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
         var i = 0
         while (i < numShorts) {
             if (currentFadeMult < 1f && fadeStep > 0f) {
-                currentFadeMult = java.lang.Math.min(1f, currentFadeMult + fadeStep)
+                currentFadeMult = min(1f, currentFadeMult + fadeStep)
             }
             val effectiveVolume = currentVolume * currentFadeMult
 

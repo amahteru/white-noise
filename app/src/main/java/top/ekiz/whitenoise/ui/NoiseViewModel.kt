@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import top.ekiz.whitenoise.data.SettingsDataStore
 import top.ekiz.whitenoise.domain.NoiseType
 import top.ekiz.whitenoise.domain.TimerManager
+import top.ekiz.whitenoise.service.NoiseService
 
 data class NoiseUiState(
     val volume: Float = 0.5f,
@@ -103,12 +104,12 @@ constructor(private val dataStore: SettingsDataStore, private val timerManager: 
 
         if (wasPlaying) {
             controller.sendCustomCommand(
-                SessionCommand("PAUSE_WITH_FADE", Bundle.EMPTY),
+                SessionCommand(NoiseService.PAUSE_WITH_FADE, Bundle.EMPTY),
                 Bundle.EMPTY
             )
         } else {
             controller.sendCustomCommand(
-                SessionCommand("PLAY_WITH_FADE", Bundle.EMPTY),
+                SessionCommand(NoiseService.PLAY_WITH_FADE, Bundle.EMPTY),
                 Bundle.EMPTY
             )
         }

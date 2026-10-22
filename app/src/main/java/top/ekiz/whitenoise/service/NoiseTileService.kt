@@ -77,12 +77,12 @@ class NoiseTileService : TileService() {
         val isPlaying = controller.isPlaying
         if (isPlaying) {
             controller.sendCustomCommand(
-                SessionCommand("PAUSE_WITH_FADE", Bundle.EMPTY),
+                SessionCommand(NoiseService.PAUSE_WITH_FADE, Bundle.EMPTY),
                 Bundle.EMPTY
             )
         } else {
             controller.sendCustomCommand(
-                SessionCommand("PLAY_WITH_FADE", Bundle.EMPTY),
+                SessionCommand(NoiseService.PLAY_WITH_FADE, Bundle.EMPTY),
                 Bundle.EMPTY
             )
         }

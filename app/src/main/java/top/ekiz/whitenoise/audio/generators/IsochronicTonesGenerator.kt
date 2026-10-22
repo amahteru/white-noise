@@ -25,11 +25,6 @@ class IsochronicTonesGenerator : NoiseGenerator() {
         carrierPhase = 0.0
     }
 
-    private fun smoothWave(phase: Double): Double {
-        val tri = if (phase < 0.5) phase * 2.0 else 2.0 - phase * 2.0
-        return tri * tri * (3.0 - 2.0 * tri)
-    }
-
     override fun process(whiteL: Float, whiteR: Float) {
         modPhase += modInc
         if (modPhase >= 1.0) modPhase -= 1.0

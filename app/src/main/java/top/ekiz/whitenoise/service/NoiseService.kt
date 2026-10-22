@@ -37,6 +37,11 @@ import top.ekiz.whitenoise.domain.TimerManager
 @AndroidEntryPoint
 class NoiseService : MediaSessionService() {
 
+    companion object {
+        const val PLAY_WITH_FADE = "PLAY_WITH_FADE"
+        const val PAUSE_WITH_FADE = "PAUSE_WITH_FADE"
+    }
+
     @Inject lateinit var settingsDataStore: SettingsDataStore
     @Inject lateinit var timerManager: TimerManager
 
@@ -148,8 +153,8 @@ class NoiseService : MediaSessionService() {
                     val availableCommands =
                         MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS
                             .buildUpon()
-                            .add(SessionCommand("PLAY_WITH_FADE", Bundle.EMPTY))
-                            .add(SessionCommand("PAUSE_WITH_FADE", Bundle.EMPTY))
+                            .add(SessionCommand(PLAY_WITH_FADE, Bundle.EMPTY))
+                            .add(SessionCommand(PAUSE_WITH_FADE, Bundle.EMPTY))
                             .build()
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .setAvailableSessionCommands(availableCommands)
@@ -163,10 +168,10 @@ class NoiseService : MediaSessionService() {
                     args: Bundle
                 ): ListenableFuture<SessionResult> {
                     when (customCommand.customAction) {
-                        "PLAY_WITH_FADE" -> {
+                        PLAY_WITH_FADE -> {
                             resumePlaybackWithFade()
                         }
-                        "PAUSE_WITH_FADE" -> {
+                        PAUSE_WITH_FADE -> {
                             fadeJob?.cancel()
                             fadeJob =
                                 serviceScope.launch {
