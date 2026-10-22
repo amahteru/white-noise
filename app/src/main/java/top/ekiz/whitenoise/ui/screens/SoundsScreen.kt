@@ -1,11 +1,15 @@
 package top.ekiz.whitenoise.ui.screens
 
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.ChildCare
@@ -18,15 +22,22 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.Waves
+import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import top.ekiz.whitenoise.domain.NoiseType
+import top.ekiz.whitenoise.ui.theme.WhiteNoiseTheme
 
 @Composable
 fun SoundsScreen(
@@ -35,25 +46,33 @@ fun SoundsScreen(
     noises: List<Pair<NoiseType, String>>,
     onTypeSelected: (NoiseType) -> Unit
 ) {
-    LazyColumn(
-        contentPadding = innerPadding,
-        modifier = Modifier.fillMaxSize().selectableGroup()
+    Column(
+        modifier =
+            Modifier.fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(innerPadding)
+                .padding(16.dp)
     ) {
-        items(noises, key = { it.first }) { (type, name) ->
-            val selected = type == currentType
-            val icon = noiseIcon(type)
-            ListItem(
-                modifier =
-                    Modifier.selectable(
-                        selected = selected,
-                        role = Role.RadioButton,
-                        onClick = { onTypeSelected(type) }
-                    ),
-                headlineContent = { Text(name) },
-                leadingContent =
-                    icon?.let { { Icon(imageVector = it, contentDescription = null) } },
-                trailingContent = { RadioButton(selected = selected, onClick = null) }
-            )
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.selectableGroup()) {
+                noises.forEach { (type, name) ->
+                    val selected = type == currentType
+                    val icon = noiseIcon(type)
+                    ListItem(
+                        modifier =
+                            Modifier.selectable(
+                                selected = selected,
+                                role = Role.RadioButton,
+                                onClick = { onTypeSelected(type) }
+                            ),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = { Text(name) },
+                        leadingContent =
+                            icon?.let { { Icon(imageVector = it, contentDescription = null) } },
+                        trailingContent = { RadioButton(selected = selected, onClick = null) }
+                    )
+                }
+            }
         }
     }
 }
@@ -73,3 +92,25 @@ private fun noiseIcon(type: NoiseType): ImageVector? =
         NoiseType.BINAURAL_BEATS -> Icons.Filled.Headset
         else -> null
     }
+
+@Preview(name = "Light", showBackground = true)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun SoundsScreenPreview() {
+    WhiteNoiseTheme {
+        Surface {
+            SoundsScreen(
+                innerPadding = PaddingValues(),
+                currentType = NoiseType.RAIN,
+                noises =
+                    listOf(
+                        NoiseType.OCEAN_WAVES to "海浪声",
+                        NoiseType.WIND to "风声",
+                        NoiseType.RAIN to "雨声",
+                        NoiseType.CAMPFIRE to "营火声"
+                    ),
+                onTypeSelected = {}
+            )
+        }
+    }
+}
