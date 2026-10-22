@@ -4,15 +4,12 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Forest
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import top.ekiz.whitenoise.R
 import top.ekiz.whitenoise.domain.NoiseType
 import top.ekiz.whitenoise.ui.NoiseUiState
 import top.ekiz.whitenoise.ui.NoiseViewModel
@@ -74,7 +71,7 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
         viewModel.togglePlayPause()
     }
 
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -94,8 +91,11 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
             if (selectedTab == 0 || selectedTab == 1) {
                 FloatingActionButton(onClick = { onPlayPauseClicked() }) {
                     Icon(
-                        imageVector =
-                            if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        painter =
+                            painterResource(
+                                if (uiState.isPlaying) R.drawable.ic_pause
+                                else R.drawable.ic_play_arrow
+                            ),
                         contentDescription = if (uiState.isPlaying) "暂停" else "播放"
                     )
                 }
@@ -104,19 +104,19 @@ fun MainAppScreen(uiState: NoiseUiState, viewModel: NoiseViewModel) {
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Palette, contentDescription = "颜色") },
+                    icon = { Icon(painterResource(R.drawable.ic_palette), contentDescription = "颜色") },
                     label = { Text("颜色") },
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Forest, contentDescription = "其他") },
+                    icon = { Icon(painterResource(R.drawable.ic_forest), contentDescription = "其他") },
                     label = { Text("其他") },
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = "设置") },
+                    icon = { Icon(painterResource(R.drawable.ic_settings), contentDescription = "设置") },
                     label = { Text("设置") },
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 }

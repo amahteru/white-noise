@@ -48,7 +48,10 @@ fun MediaController.sendLiveValue(action: String, value: Float) {
     )
 }
 
-@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@androidx.annotation.OptIn(
+    androidx.media3.common.util.UnstableApi::class,
+    androidx.media3.common.util.ExperimentalApi::class
+)
 @AndroidEntryPoint
 class NoiseService : MediaSessionService() {
 
@@ -185,7 +188,7 @@ class NoiseService : MediaSessionService() {
                             .add(SessionCommand(SET_LIVE_VOLUME, Bundle.EMPTY))
                             .add(SessionCommand(SET_LIVE_BALANCE, Bundle.EMPTY))
                             .build()
-                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
                         .setAvailableSessionCommands(availableCommands)
                         .build()
                 }

@@ -5,20 +5,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.SurroundSound
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import java.util.Calendar
 import kotlin.math.roundToInt
+import top.ekiz.whitenoise.R
 import top.ekiz.whitenoise.ui.components.SliderSettingRow
 import top.ekiz.whitenoise.ui.theme.WhiteNoiseTheme
 import top.ekiz.whitenoise.ui.theme.spacing
@@ -70,7 +67,7 @@ fun SettingsScreen(
         var volumeDraft by remember { mutableStateOf<Float?>(null) }
         LaunchedEffect(volume) { volumeDraft = null }
         SliderSettingRow(
-            icon = Icons.AutoMirrored.Filled.VolumeUp,
+            icon = R.drawable.ic_volume_up,
             contentDescription = "音量大小",
             value = volumeDraft ?: volume,
             onValueChange = {
@@ -85,7 +82,7 @@ fun SettingsScreen(
         var balanceDraft by remember { mutableStateOf<Float?>(null) }
         LaunchedEffect(balance) { balanceDraft = null }
         SliderSettingRow(
-            icon = Icons.Filled.Tune,
+            icon = R.drawable.ic_tune,
             contentDescription = "左右耳平衡",
             value = balanceDraft ?: balance,
             onValueChange = {
@@ -117,7 +114,7 @@ fun SettingsScreen(
         LaunchedEffect(sleepTimer) { sleepTimerDraft = null }
         val shownSleepTimer = sleepTimerDraft ?: sleepTimer
         SliderSettingRow(
-            icon = Icons.Filled.Schedule,
+            icon = R.drawable.ic_schedule,
             contentDescription = "倒计时长: $shownSleepTimer 分钟",
             value = shownSleepTimer.coerceAtMost(120).toFloat(),
             onValueChange = { sleepTimerDraft = it.roundToInt() },
@@ -146,7 +143,7 @@ fun SettingsScreen(
                     )
                 )
             },
-            leadingContent = { Icon(Icons.Filled.Schedule, contentDescription = null) },
+            leadingContent = { Icon(painterResource(R.drawable.ic_schedule), contentDescription = null) },
             trailingContent = {
                 OutlinedButton(onClick = { showTimePicker = true }) { Text("设定时间") }
             }
@@ -159,8 +156,21 @@ fun SettingsScreen(
                     initialMinute = targetMinute,
                     is24Hour = true
                 )
-            AlertDialog(
+            var displayMode by remember { mutableStateOf(TimePickerDisplayMode.Picker) }
+            TimePickerDialog(
                 onDismissRequest = { showTimePicker = false },
+                title = { TimePickerDialogDefaults.Title(displayMode = displayMode) },
+                modeToggleButton = {
+                    TimePickerDialogDefaults.DisplayModeToggle(
+                        onDisplayModeChange = {
+                            displayMode =
+                                if (displayMode == TimePickerDisplayMode.Picker)
+                                    TimePickerDisplayMode.Input
+                                else TimePickerDisplayMode.Picker
+                        },
+                        displayMode = displayMode
+                    )
+                },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -185,9 +195,14 @@ fun SettingsScreen(
                         Text("确定")
                     }
                 },
-                dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("取消") } },
-                text = { TimePicker(state = timePickerState) }
-            )
+                dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("取消") } }
+            ) {
+                if (displayMode == TimePickerDisplayMode.Picker) {
+                    TimePicker(state = timePickerState)
+                } else {
+                    TimeInput(state = timePickerState)
+                }
+            }
         }
 
         Column(modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium)) {
@@ -276,7 +291,7 @@ fun SettingsScreen(
                 ),
             headlineContent = { Text("3D 空间音频 (双耳渲染)") },
             leadingContent = {
-                Icon(imageVector = Icons.Filled.SurroundSound, contentDescription = null)
+                Icon(painter = painterResource(R.drawable.ic_surround_sound), contentDescription = null)
             },
             trailingContent = { Switch(checked = isSpatialAudioEnabled, onCheckedChange = null) }
         )

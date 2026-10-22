@@ -1,5 +1,6 @@
 package top.ekiz.whitenoise.ui
 
+import android.app.UiModeManager
 import android.content.ComponentName
 import android.os.Bundle
 import android.util.Log
@@ -11,6 +12,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -69,6 +71,17 @@ class MainActivity : ComponentActivity() {
 
             if (uiState.isLoading) {
                 return@setContent
+            }
+
+            LaunchedEffect(uiState.themeMode) {
+                getSystemService(UiModeManager::class.java)
+                    .setApplicationNightMode(
+                        when (uiState.themeMode) {
+                            "Dark" -> UiModeManager.MODE_NIGHT_YES
+                            "Light" -> UiModeManager.MODE_NIGHT_NO
+                            else -> UiModeManager.MODE_NIGHT_AUTO
+                        }
+                    )
             }
 
             val darkTheme =

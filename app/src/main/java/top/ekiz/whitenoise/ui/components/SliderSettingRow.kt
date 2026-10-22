@@ -1,16 +1,18 @@
 package top.ekiz.whitenoise.ui.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import top.ekiz.whitenoise.R
 import top.ekiz.whitenoise.ui.theme.spacing
 
 @Composable
 fun SliderSettingRow(
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     contentDescription: String,
     value: Float,
     onValueChange: (Float) -> Unit,
@@ -21,7 +23,7 @@ fun SliderSettingRow(
 ) {
     ListItem(
         headlineContent = { Text(contentDescription) },
-        leadingContent = { Icon(imageVector = icon, contentDescription = null) },
+        leadingContent = { Icon(painter = painterResource(icon), contentDescription = null) },
         supportingContent = {
             Column(modifier = Modifier.padding(top = MaterialTheme.spacing.small)) {
                 Slider(
