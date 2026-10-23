@@ -5,6 +5,8 @@ import android.content.ComponentName
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -71,19 +73,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             val uiState by viewModel.uiState.collectAsState()
 
-            if (uiState.isLoading) {
-                return@setContent
-            }
-
-            LaunchedEffect(uiState.themeMode) {
-                getSystemService(UiModeManager::class.java)
-                    .setApplicationNightMode(
-                        when (uiState.themeMode) {
-                            "Dark" -> UiModeManager.MODE_NIGHT_YES
-                            "Light" -> UiModeManager.MODE_NIGHT_NO
-                            else -> UiModeManager.MODE_NIGHT_AUTO
-                        }
-                    )
+            if (!uiState.isLoading) {
+                LaunchedEffect(uiState.themeMode) {
+                    getSystemService(UiModeManager::class.java)
+                        .setApplicationNightMode(
+                            when (uiState.themeMode) {
+                                "Dark" -> UiModeManager.MODE_NIGHT_YES
+                                "Light" -> UiModeManager.MODE_NIGHT_NO
+                                else -> UiModeManager.MODE_NIGHT_AUTO
+                            }
+                        )
+                }
             }
 
             val darkTheme =
@@ -108,5 +108,16 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        val content = findViewById<View>(android.R.id.content)
+        content.viewTreeObserver.addOnPreDrawListener(
+            object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    if (viewModel.uiState.value.isLoading) return false
+                    content.viewTreeObserver.removeOnPreDrawListener(this)
+                    return true
+                }
+            }
+        )
     }
 }
