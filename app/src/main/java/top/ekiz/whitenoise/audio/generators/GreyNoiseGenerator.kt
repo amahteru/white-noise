@@ -95,7 +95,7 @@ class GreyNoiseGenerator : NoiseGenerator() {
         greyHy2L = greyHy1L
         greyHy1L = outY_L
 
-        outL = (outY_L * 0.12).toFloat()
+        outL = (outY_L * 0.14).toFloat()
 
         val midR =
             greyL_b0 * wR + greyL_b1 * greyLx1R + greyL_b2 * greyLx2R -
@@ -115,6 +115,6 @@ class GreyNoiseGenerator : NoiseGenerator() {
         greyHy2R = greyHy1R
         greyHy1R = outY_R
 
-        outR = (outY_R * 0.12).toFloat()
+        outR = (outY_R * 0.14).toFloat()
     }
 }

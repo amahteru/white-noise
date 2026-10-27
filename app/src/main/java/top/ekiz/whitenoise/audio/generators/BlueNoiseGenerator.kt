@@ -15,11 +15,11 @@ class BlueNoiseGenerator : NoiseGenerator() {
 
     override fun process(whiteL: Float, whiteR: Float) {
         val pL = pinkL.process(whiteL.toDouble())
-        outL = ((pL - lastPinkL) * 2.0).toFloat()
+        outL = ((pL - lastPinkL) * 0.17).toFloat()
         lastPinkL = pL
 
         val pR = pinkR.process(whiteR.toDouble())
-        outR = ((pR - lastPinkR) * 2.0).toFloat()
+        outR = ((pR - lastPinkR) * 0.17).toFloat()
         lastPinkR = pR
     }
 }

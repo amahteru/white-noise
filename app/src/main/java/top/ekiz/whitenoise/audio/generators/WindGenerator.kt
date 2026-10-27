@@ -54,7 +54,7 @@ class WindGenerator : NoiseGenerator() {
         windSvfBpR += fL * hpR
         windSvfLpR += fL * windSvfBpR
 
-        outL = (windSvfLpL * 10.0).toFloat()
-        outR = (windSvfLpR * 10.0).toFloat()
+        outL = (windSvfLpL * 4.1).toFloat()
+        outR = (windSvfLpR * 4.1).toFloat()
     }
 }

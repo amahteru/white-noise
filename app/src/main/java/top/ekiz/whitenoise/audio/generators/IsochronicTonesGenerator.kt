@@ -32,7 +32,7 @@ class IsochronicTonesGenerator : NoiseGenerator() {
 
         val envelope = smoothWave(modPhase)
 
-        val output = (sin(carrierPhase) * 0.5 * envelope).toFloat()
+        val output = (sin(carrierPhase) * 0.42 * envelope).toFloat()
 
         outL = output
         outR = output

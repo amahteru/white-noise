@@ -14,7 +14,7 @@ class BlackNoiseGenerator : NoiseGenerator() {
     }
 
     override fun process(whiteL: Float, whiteR: Float) {
-        outL = (blackL.process(brownL.process(whiteL.toDouble())) * 10.0).toFloat()
-        outR = (blackR.process(brownR.process(whiteR.toDouble())) * 10.0).toFloat()
+        outL = (blackL.process(brownL.process(whiteL.toDouble())) * 5.5).toFloat()
+        outR = (blackR.process(brownR.process(whiteR.toDouble())) * 5.5).toFloat()
     }
 }

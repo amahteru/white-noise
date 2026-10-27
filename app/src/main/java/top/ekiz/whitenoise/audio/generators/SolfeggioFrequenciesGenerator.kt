@@ -24,7 +24,7 @@ class SolfeggioFrequenciesGenerator : NoiseGenerator() {
         phase += phaseInc
         if (phase > 2.0 * PI) phase -= 2.0 * PI
 
-        val output = (sin(phase) * 0.5).toFloat()
+        val output = (sin(phase) * 0.25).toFloat()
 
         outL = output
         outR = output

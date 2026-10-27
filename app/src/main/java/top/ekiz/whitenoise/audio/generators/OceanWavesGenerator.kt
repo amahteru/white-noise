@@ -59,7 +59,7 @@ class OceanWavesGenerator : NoiseGenerator() {
 
         val smooth = getEnvelope(oceanPhase)
 
-        val envelope = (smooth * 0.9 + 0.1) * currentAmp
+        val envelope = (smooth * 0.9 + 0.1) * currentAmp * 1.7
 
         outL = (pink.outL * envelope).toFloat()
         outR = (pink.outR * envelope).toFloat()

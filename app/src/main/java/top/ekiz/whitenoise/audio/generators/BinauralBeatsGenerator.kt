@@ -32,7 +32,7 @@ class BinauralBeatsGenerator : NoiseGenerator() {
         if (binauralPhaseL > 2.0 * PI) binauralPhaseL -= 2.0 * PI
         if (binauralPhaseR > 2.0 * PI) binauralPhaseR -= 2.0 * PI
 
-        outL = (sin(binauralPhaseL) * 0.5).toFloat()
-        outR = (sin(binauralPhaseR) * 0.5).toFloat()
+        outL = (sin(binauralPhaseL) * 0.25).toFloat()
+        outR = (sin(binauralPhaseR) * 0.25).toFloat()
     }
 }

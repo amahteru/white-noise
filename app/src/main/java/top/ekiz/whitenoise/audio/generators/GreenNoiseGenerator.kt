@@ -45,13 +45,13 @@ class GreenNoiseGenerator : NoiseGenerator() {
         greenX1L = wL
         greenY2L = greenY1L
         greenY1L = outY_L
-        outL = (outY_L * 4.0).toFloat()
+        outL = (outY_L * 1.24).toFloat()
 
         val outY_R = greenB0 * wR + greenB2 * greenX2R - greenA1 * greenY1R - greenA2 * greenY2R
         greenX2R = greenX1R
         greenX1R = wR
         greenY2R = greenY1R
         greenY1R = outY_R
-        outR = (outY_R * 4.0).toFloat()
+        outR = (outY_R * 1.24).toFloat()
     }
 }

@@ -45,7 +45,7 @@ class VelvetNoiseGenerator : NoiseGenerator() {
             velvetPulseL = 0.0
         }
         velvetLpfL = velvetLpfL * 0.95238 + velvetPulseL * 0.04762
-        outL = (velvetLpfL * 2.5).toFloat()
+        outL = (velvetLpfL * 5.5).toFloat()
 
         velvetCounterR++
         if (velvetCounterR >= velvetGridR) {
@@ -56,6 +56,6 @@ class VelvetNoiseGenerator : NoiseGenerator() {
             velvetPulseR = 0.0
         }
         velvetLpfR = velvetLpfR * 0.95238 + velvetPulseR * 0.04762
-        outR = (velvetLpfR * 2.5).toFloat()
+        outR = (velvetLpfR * 5.5).toFloat()
     }
 }

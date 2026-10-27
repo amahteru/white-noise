@@ -43,6 +43,14 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var tickerJob: Job? = null
 
+    @Volatile private var endTimeMillis = 0L
+
+    /** Remaining time computed from the wall clock, unlike [activeRemainingMillis] which ticks once a second. */
+    fun currentRemainingMillis(): Long {
+        if (!_isTimerRunning.value) return _activeRemainingMillis.value
+        return (endTimeMillis - System.currentTimeMillis()).coerceAtLeast(0L)
+    }
+
     init {
         scope.launch {
             val total = settingsDataStore.totalTimerMillisFlow.first()
@@ -139,6 +147,7 @@ class TimerManager @Inject constructor(private val settingsDataStore: SettingsDa
 
     private fun startTicker(durationMs: Long, endTime: Long) {
         tickerJob?.cancel()
+        endTimeMillis = endTime
         _isTimerRunning.value = true
         _activeRemainingMillis.value = durationMs
 

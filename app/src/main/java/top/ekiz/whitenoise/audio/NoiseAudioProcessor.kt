@@ -3,8 +3,11 @@ package top.ekiz.whitenoise.audio
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
 import java.nio.ByteBuffer
+import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.tanh
 import top.ekiz.whitenoise.audio.generators.NoiseGenerator
 import top.ekiz.whitenoise.audio.generators.NoiseGeneratorFactory
 import top.ekiz.whitenoise.domain.NoiseType
@@ -17,10 +20,15 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
     @Volatile var isSpatialAudioEnabled: Boolean = false
     @Volatile var forceImmediateSwitch: Boolean = false
 
+    private class FadingVoice(val generator: NoiseGenerator, var baseGain: Float)
+
     private var currentNoiseType = noiseType
 
     private var currentGenerator: NoiseGenerator = NoiseGeneratorFactory.create(noiseType)
-    private var fadingGenerator: NoiseGenerator? = null
+
+    // Each fading voice plays at baseGain * (1 - crossfadeProgress); the bases sum to 1, so a
+    // switch in the middle of a crossfade keeps every voice's gain continuous.
+    private val fadingVoices = ArrayList<FadingVoice>()
 
     fun initialize(type: NoiseType) {
         noiseType = type
@@ -37,10 +45,19 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
 
     private fun switchImmediately(type: NoiseType) {
         currentNoiseType = type
-        fadingGenerator = null
+        fadingVoices.clear()
         crossfadeProgress = 1f
         currentGenerator = createGenerator(type)
         forceImmediateSwitch = false
+    }
+
+    private fun startCrossfade(type: NoiseType) {
+        val remaining = 1f - crossfadeProgress
+        for (voice in fadingVoices) voice.baseGain *= remaining
+        fadingVoices.add(FadingVoice(currentGenerator, crossfadeProgress))
+        currentGenerator = createGenerator(type)
+        currentNoiseType = type
+        crossfadeProgress = 0f
     }
 
     private var crossfadeProgress = 1f
@@ -51,6 +68,12 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
     private var headShadowL = 0f
     private var headShadowR = 0f
 
+    // Per-sample smoothing so volume, balance and spatial changes never step mid-waveform.
+    private var smoothing = smoothingCoeff(44100)
+    private var gainL = 0f
+    private var gainR = 0f
+    private var spatialMix = 0f
+
     private var rngState: Long = System.nanoTime().let { if (it == 0L) 1L else it }
 
     override fun onConfigure(
@@ -60,15 +83,16 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
         if (sr > 0) {
             crossfadeStep = 1f / (sr.toFloat() * 1.5f)
             lfoStep = 2.0 * Math.PI * 0.05 / sr.toDouble()
+            smoothing = smoothingCoeff(sr)
             currentGenerator.updateSampleRate(sr.toDouble())
-            fadingGenerator?.updateSampleRate(sr.toDouble())
+            for (voice in fadingVoices) voice.generator.updateSampleRate(sr.toDouble())
         }
         return inputAudioFormat
     }
 
     override fun onFlush(streamMetadata: AudioProcessor.StreamMetadata) {
         currentGenerator.reset()
-        fadingGenerator?.reset()
+        for (voice in fadingVoices) voice.generator.reset()
     }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
@@ -79,10 +103,11 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
 
         val currentVolume = volume
         val currentBalance = balance
-        val leftVol = 1f - max(0f, currentBalance)
-        val rightVol = 1f + min(0f, currentBalance)
-
         val isStereo = inputAudioFormat.channelCount == 2
+        val targetGainL = (1f - max(0f, currentBalance)) * currentVolume
+        val targetGainR = (1f + min(0f, currentBalance)) * currentVolume
+        val targetSpatial = if (isSpatialAudioEnabled && isStereo) 1f else 0f
+
         val numShorts = remaining / 2
 
         inputBuffer.position(inputBuffer.position() + remaining)
@@ -91,10 +116,7 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
             if (forceImmediateSwitch) {
                 switchImmediately(noiseType)
             } else {
-                fadingGenerator = currentGenerator
-                currentGenerator = createGenerator(noiseType)
-                currentNoiseType = noiseType
-                crossfadeProgress = 0f
+                startCrossfade(noiseType)
             }
         } else {
             forceImmediateSwitch = false
@@ -133,22 +155,22 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
                 crossfadeProgress += crossfadeStep
                 if (crossfadeProgress >= 1f) {
                     crossfadeProgress = 1f
-                    fadingGenerator = null
+                    fadingVoices.clear()
                 } else {
-                    val fadeGen = fadingGenerator
-                    if (fadeGen != null) {
-                        fadeGen.process(whiteL, whiteR)
-
-                        val fadeInGain = crossfadeProgress
-                        val fadeOutGain = 1f - crossfadeProgress
-
-                        outputL = outputL * fadeInGain + fadeGen.outL * fadeOutGain
-                        outputR = outputR * fadeInGain + fadeGen.outR * fadeOutGain
+                    val fadeOutGain = 1f - crossfadeProgress
+                    outputL *= crossfadeProgress
+                    outputR *= crossfadeProgress
+                    for (voice in fadingVoices) {
+                        voice.generator.process(whiteL, whiteR)
+                        val gain = voice.baseGain * fadeOutGain
+                        outputL += voice.generator.outL * gain
+                        outputR += voice.generator.outR * gain
                     }
                 }
             }
 
-            if (isSpatialAudioEnabled && isStereo) {
+            spatialMix += (targetSpatial - spatialMix) * smoothing
+            if (isStereo && (spatialMix > 1e-4f || targetSpatial > 0f)) {
                 lfoPhase += lfoStep
                 if (lfoPhase > Math.PI * 2.0) {
                     lfoPhase -= Math.PI * 2.0
@@ -165,27 +187,43 @@ class NoiseAudioProcessor : BaseAudioProcessor() {
                 val lpfCoeffR = 1.0f - max(0f, -lfoVal * 0.4f)
                 headShadowR = headShadowR + lpfCoeffR * (outputR - headShadowR)
 
-                outputL = headShadowL * levelL
-                outputR = headShadowR * levelR
+                outputL += (headShadowL * levelL - outputL) * spatialMix
+                outputR += (headShadowR * levelR - outputR) * spatialMix
+            } else {
+                headShadowL = outputL
+                headShadowR = outputR
             }
 
-            if (outputL > 1f) outputL = 1f
-            if (outputL < -1f) outputL = -1f
-            if (outputR > 1f) outputR = 1f
-            if (outputR < -1f) outputR = -1f
+            gainL += (targetGainL - gainL) * smoothing
+            gainR += (targetGainR - gainR) * smoothing
 
-            val sampleL = (outputL * leftVol * Short.MAX_VALUE * currentVolume).toInt().toShort()
+            val sampleL = (softLimit(outputL) * gainL * Short.MAX_VALUE).toInt().toShort()
             buffer.putShort(sampleL)
             i++
 
             if (isStereo) {
-                val sampleR =
-                    (outputR * rightVol * Short.MAX_VALUE * currentVolume).toInt().toShort()
+                val sampleR = (softLimit(outputR) * gainR * Short.MAX_VALUE).toInt().toShort()
                 buffer.putShort(sampleR)
                 i++
             }
         }
 
         buffer.flip()
+    }
+
+    private companion object {
+        const val LIMIT_KNEE = 0.8f
+
+        fun smoothingCoeff(sampleRate: Int): Float =
+            (1.0 - exp(-1.0 / (0.02 * sampleRate))).toFloat()
+
+        // Transparent below the knee, then saturates smoothly towards ±1 instead of hard clipping.
+        fun softLimit(x: Float): Float {
+            val magnitude = abs(x)
+            if (magnitude <= LIMIT_KNEE) return x
+            val headroom = 1f - LIMIT_KNEE
+            val limited = LIMIT_KNEE + headroom * tanh((magnitude - LIMIT_KNEE) / headroom)
+            return if (x < 0f) -limited else limited
+        }
     }
 }

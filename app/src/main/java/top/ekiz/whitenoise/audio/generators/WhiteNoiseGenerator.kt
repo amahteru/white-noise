@@ -4,7 +4,7 @@ class WhiteNoiseGenerator : NoiseGenerator() {
     override fun reset() {}
 
     override fun process(whiteL: Float, whiteR: Float) {
-        outL = whiteL
-        outR = whiteR
+        outL = whiteL * 0.3f
+        outR = whiteR * 0.3f
     }
 }

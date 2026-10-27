@@ -83,8 +83,8 @@ class RainGenerator : NoiseGenerator() {
         hp1R += fHp * hp2R
         val sizzleR = hpR_hstate
 
-        val outVolumeL = rumbleL * 0.6 + sizzleL * 0.15
-        val outVolumeR = rumbleR * 0.6 + sizzleR * 0.15
+        val outVolumeL = rumbleL * 1.2 + sizzleL * 0.3
+        val outVolumeR = rumbleR * 1.2 + sizzleR * 0.3
 
         val swell = 0.85 + gust * 0.15
 

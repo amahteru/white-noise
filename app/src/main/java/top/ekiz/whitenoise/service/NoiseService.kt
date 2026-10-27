@@ -4,6 +4,7 @@ import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
@@ -61,6 +62,8 @@ class NoiseService : MediaSessionService() {
         const val SET_LIVE_VOLUME = "SET_LIVE_VOLUME"
         const val SET_LIVE_BALANCE = "SET_LIVE_BALANCE"
         const val EXTRA_VALUE = "value"
+
+        private const val RESUME_AFTER_DISCONNECT_WINDOW_MILLIS = 5 * 60_000L
     }
 
     @Inject lateinit var settingsDataStore: SettingsDataStore
@@ -82,6 +85,8 @@ class NoiseService : MediaSessionService() {
         }
     private var isPausedByCall = false
     private var isPausedByDeviceDisconnect = false
+    private var deviceDisconnectedAt = 0L
+    private var isPausing = false
     private var fadeJob: Job? = null
 
     private val audioDeviceCallback =
@@ -90,6 +95,13 @@ class NoiseService : MediaSessionService() {
                 val hasExternalDevice = addedDevices?.any { it.isExternalDevice() } == true
                 if (hasExternalDevice && isPausedByDeviceDisconnect) {
                     isPausedByDeviceDisconnect = false
+                    // Only a quick reconnect resumes; hours later it may be a car or speaker.
+                    if (
+                        SystemClock.elapsedRealtime() - deviceDisconnectedAt >
+                            RESUME_AFTER_DISCONNECT_WINDOW_MILLIS
+                    ) {
+                        return
+                    }
 
                     fadeJob?.cancel()
                     fadeJob =
@@ -112,15 +124,11 @@ class NoiseService : MediaSessionService() {
 
     private fun AudioDeviceInfo.isExternalDevice(): Boolean {
         return type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
-            type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
             type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
             type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
             type == AudioDeviceInfo.TYPE_USB_HEADSET ||
-            type == AudioDeviceInfo.TYPE_USB_DEVICE ||
             type == AudioDeviceInfo.TYPE_HEARING_AID ||
-            type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
-            type == AudioDeviceInfo.TYPE_BLE_SPEAKER ||
-            type == AudioDeviceInfo.TYPE_BLE_BROADCAST
+            type == AudioDeviceInfo.TYPE_BLE_HEADSET
     }
 
     override fun onCreate() {
@@ -161,6 +169,7 @@ class NoiseService : MediaSessionService() {
                             reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY
                     ) {
                         isPausedByDeviceDisconnect = true
+                        deviceDisconnectedAt = SystemClock.elapsedRealtime()
 
                         fadeJob?.cancel()
                     } else if (
@@ -259,15 +268,12 @@ class NoiseService : MediaSessionService() {
                 timerManager.timerEvents.collect { event ->
                     when (event) {
                         TimerEvent.TIMER_UPDATED -> {
-                            if (player.isPlaying) {
+                            if (player.isPlaying && !isPausing) {
                                 fadeJob?.cancel()
                                 fadeJob = serviceScope.launch { followTimerVolume(1000L) }
                             }
                         }
-                        TimerEvent.TIMER_FINISHED -> {
-                            fadeJob?.cancel()
-                            player.pause()
-                        }
+                        TimerEvent.TIMER_FINISHED -> fadeOutAndPause(pausedByCall = false)
                     }
                 }
             }
@@ -327,16 +333,26 @@ class NoiseService : MediaSessionService() {
 
     private fun fadeOutAndPause(pausedByCall: Boolean) {
         fadeJob?.cancel()
+        isPausedByCall = pausedByCall
+        if (!pausedByCall) isPausedByDeviceDisconnect = false
+        isPausing = true
         fadeJob =
             serviceScope.launch {
                 animatePlayerVolume(player.volume, 0f, 500L)
                 player.pause()
-                isPausedByCall = pausedByCall
+                isPausing = false
             }
     }
 
     private fun resumePlaybackWithFade() {
         fadeJob?.cancel()
+        isPausing = false
+        if (player.playWhenReady && player.playbackState == Player.STATE_READY) {
+            // Already playing (or mid fade-out): ramp back from the current level, no restart.
+            isPausedByCall = false
+            fadeJob = serviceScope.launch { followTimerVolume(1000L) }
+            return
+        }
         fadeJob =
             serviceScope.launch {
                 player.volume = 0f
@@ -365,20 +381,31 @@ class NoiseService : MediaSessionService() {
 
     private fun timerVolume(): Float {
         if (!timerManager.isTimerRunning.value) return 1f
-        return (timerManager.activeRemainingMillis.value.toFloat() / fadeWindowMillis())
+        return (timerManager.currentRemainingMillis().toFloat() / fadeWindowMillis())
             .coerceIn(0f, 1f)
     }
+
+    private fun isInTimerFade(): Boolean =
+        timerManager.isTimerRunning.value &&
+            timerManager.currentRemainingMillis() in 1L..fadeWindowMillis()
 
     private fun fadeWindowMillis(): Long =
         timerManager.totalTimerMillis.value
             .takeIf { it > 0L }
             ?.coerceAtMost(TimerManager.FADE_OUT_MILLIS) ?: TimerManager.FADE_OUT_MILLIS
 
+    /**
+     * Ramps from the current volume onto the timer's fade curve, then keeps tracking that curve.
+     * Everything is derived from the clock, so the volume reaches 0 exactly when the timer ends.
+     */
     private suspend fun followTimerVolume(rampMs: Long) {
-        animatePlayerVolume(player.volume, timerVolume(), rampMs)
-        val remaining = timerManager.activeRemainingMillis.value
-        if (timerManager.isTimerRunning.value && remaining in 1L..fadeWindowMillis()) {
-            animatePlayerVolume(player.volume, 0f, remaining)
+        val from = player.volume
+        val start = SystemClock.uptimeMillis()
+        while (true) {
+            val ramp = ((SystemClock.uptimeMillis() - start).toFloat() / rampMs).coerceIn(0f, 1f)
+            player.volume = from + (timerVolume() - from) * ramp
+            if (ramp >= 1f && !isInTimerFade()) return
+            delay(20)
         }
     }
 

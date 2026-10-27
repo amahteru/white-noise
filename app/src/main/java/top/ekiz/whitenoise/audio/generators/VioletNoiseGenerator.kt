@@ -13,8 +13,8 @@ class VioletNoiseGenerator : NoiseGenerator() {
         val wL = whiteL.toDouble()
         val wR = whiteR.toDouble()
 
-        outL = (wL - lastWhiteL).toFloat()
-        outR = (wR - lastWhiteR).toFloat()
+        outL = ((wL - lastWhiteL) * 0.22).toFloat()
+        outR = ((wR - lastWhiteR) * 0.22).toFloat()
 
         lastWhiteL = wL
         lastWhiteR = wR
