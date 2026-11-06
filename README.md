@@ -15,7 +15,7 @@
 
 ## 安装
 
-访问项目的 [GitHub Actions](https://github.com/ethanzhou-dev/white-noise/actions) 页面，点击最新一次成功的构建，在页面底部的 Artifacts 中下载最新版本的 `.apk` 文件（需要解压），然后在 Android 设备上安装。
+访问项目的 [GitHub Actions](https://github.com/ethanzhou-dev/white-noise/actions) 页面，点击最新一次成功的构建，在页面底部的 Artifacts 中下载最新版本的 `.apk` 文件，然后在 Android 设备上安装。
 
 ## 使用
 

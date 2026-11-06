@@ -50,10 +50,7 @@ fun MediaController.sendLiveValue(action: String, value: Float) {
     )
 }
 
-@androidx.annotation.OptIn(
-    androidx.media3.common.util.UnstableApi::class,
-    androidx.media3.common.util.ExperimentalApi::class
-)
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
 class NoiseService : MediaSessionService() {
     companion object {
@@ -158,7 +155,6 @@ class NoiseService : MediaSessionService() {
                 )
                 .setHandleAudioBecomingNoisy(true)
                 .setWakeMode(C.WAKE_MODE_LOCAL)
-                .experimentalSetDynamicSchedulingEnabled(true)
                 .build()
 
         player.addListener(
