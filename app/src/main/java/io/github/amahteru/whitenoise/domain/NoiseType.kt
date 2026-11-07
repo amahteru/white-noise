@@ -1,0 +1,24 @@
+package io.github.amahteru.whitenoise.domain
+
+enum class NoiseType {
+    WHITE,
+    PINK,
+    BROWN,
+    DEEP_BROWN,
+    BLUE,
+    VIOLET,
+    GREY,
+    GREEN,
+    BLACK,
+    VELVET,
+    OCEAN_WAVES,
+    BINAURAL_BEATS,
+    WIND,
+    AIRPLANE_CABIN,
+    HEARTBEAT,
+    ISOCHRONIC_TONES,
+    SOLFEGGIO_FREQUENCIES,
+    WOMB_SOUNDS,
+    RAIN,
+    CAMPFIRE
+}

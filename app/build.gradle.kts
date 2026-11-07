@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "top.ekiz.whitenoise"
+    namespace = "io.github.amahteru.whitenoise"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "top.ekiz.whitenoise"
+        applicationId = "io.github.amahteru.whitenoise"
         minSdk = 34
         targetSdk = 37
         versionCode = 1

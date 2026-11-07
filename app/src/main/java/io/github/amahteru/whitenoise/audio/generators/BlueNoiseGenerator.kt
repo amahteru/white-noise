@@ -1,0 +1,25 @@
+package io.github.amahteru.whitenoise.audio.generators
+
+class BlueNoiseGenerator : NoiseGenerator() {
+    private val pinkL = PinkFilter()
+    private val pinkR = PinkFilter()
+    private var lastPinkL = 0.0
+    private var lastPinkR = 0.0
+
+    override fun reset() {
+        pinkL.reset()
+        pinkR.reset()
+        lastPinkL = 0.0
+        lastPinkR = 0.0
+    }
+
+    override fun process(whiteL: Float, whiteR: Float) {
+        val pL = pinkL.process(whiteL.toDouble())
+        outL = ((pL - lastPinkL) * 0.17).toFloat()
+        lastPinkL = pL
+
+        val pR = pinkR.process(whiteR.toDouble())
+        outR = ((pR - lastPinkR) * 0.17).toFloat()
+        lastPinkR = pR
+    }
+}
